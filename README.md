@@ -1,5 +1,5 @@
 # HappyBee
-### HappyBee is a companion set of features to complement ecobee Smart Thermostat
+### HappyBee is a companion set of features to complement ecobee smart thermostats
 * **Instant Home/Away mode** that's immediately triggered by turning on a security camera or another device. The native away mode takes hours to be triggered, and only when the conditions are ideal
 * HappyBee also **fixes a bug when HRV and furnace fan run indefinitely** when the native "Away for now" mode is triggered remotely via the ecobee app, API, IFTTT etc.
 * **Humidity normalization** using a Heat Recovery Ventilator. 
@@ -9,14 +9,14 @@
 
 ## Warnings, notes and known issues
 * The scripts include functionality that could result in your equipment being switched off during an emergency; they are also not guaranteed to run without issues on specific hardware/software combinations or in case ecobee API is significantly updated
-* The scripts could be a starting point for your development project or serve as a proof od concept, without any guarantees or warranties implied. Please see [LICENSE.md](LICENSE.md) for additional notes
+* The scripts could be a starting point for your development project or serve as a proof of concept, without any guarantees or warranties implied. Please see [LICENSE.md](LICENSE.md) for additional notes
 * When one or more of the remote detectors is low on battery, it can report false occupancy and sometimes (rarely) a false alert may be generated 
 
 ## Getting Started
 ### Prerequisites and what's needed
 * ecobee3 (tested) or ecobee4 thermostat with a static IP. Not recommended for ecobee lite: only a subset of the features may work
 * a security camera or another device that could indicate you are away, having a static IP or DNS name on the local network until the ventilation bug is fixed and built-in ecobee "Home for now / Away for now" functionality could be used instead
-* an always-on linux server, i.e. DD-WRT (tested) or OpenWRT router, Raspberry Pi etc.
+* an always-on Linux server, i.e. DD-WRT (tested) or OpenWRT router, Raspberry Pi etc.
 * the server would need to have persistent storage (flash drive, SD card, SSD/HDD)
 
 ## Architecture
