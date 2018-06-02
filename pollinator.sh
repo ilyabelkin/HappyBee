@@ -26,7 +26,7 @@ Messenger="$4"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="3.7.0.969"
+BFirmwareVersion="4.2.0.394"
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
 FreezingRiskT=410
 # 92F/33.3C
@@ -94,6 +94,7 @@ if [ -n "$AccessToken" ]; then
     VentilatorMinOnTimeAway=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTimeAway)
     VentilatorMinOnTime=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTime)
     FanMinOnTime=$(FnGetValue "$RuntimeParameters" fanMinOnTime)
+    # TODO: only use main thermostat temperature for the calculation, average temperature skews absolute humidity and may cause incorrect operation in some cases
     IndoorT=$(FnGetValue "$RuntimeParameters" actualTemperature)
     IndoorRH=$(FnGetValue "$RuntimeParameters" actualHumidity)
     OutT=$(FnGetValue "$RuntimeParameters" temperature)
@@ -263,8 +264,8 @@ if [ -n "$HRVSetStatus" ]; then
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
-    # TODO: only write to log after full testing of the algorithm is completed
-    "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)."
+    # TODO: uncomment the next line to enable email notifications on start of the ventilation cycle
+    # "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)."
     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
 
