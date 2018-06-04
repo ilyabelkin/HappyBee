@@ -161,7 +161,7 @@ fi
 
 # Check if the cam is on
 # It's possible to either ping the cam as in the example below, or use curl to receive specific information
-if ! ping -w5 "$CamIP" > /dev/null; then 
+if ! ping -c 1 -w 30 "$CamIP" > /dev/null; then 
     CamOn=false
     # echo "DEBUG: CamOn $CamOn" 2>&1 | logger -t POLLINATOR
 else
@@ -277,7 +277,7 @@ if [ "$FreezingRisk" = true ]; then
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
 fi
 
-if ! ping -w5 "$EcoBIP" > /dev/null; then
+if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
     EcoBPing=false 
 fi
 
