@@ -64,10 +64,21 @@ FnGetAccessToken() {
 
 # First parameter is the source JSON, and second is the key
 # ## Note that simply parsing values with AWK is very hacky and relies on the input formatting too much. 
-# TODO: Change to a better JSON parser implementation as described here: https://unix.stackexchange.com/questions/298692/where-can-i-find-shell-script-for-parse-json-on-busybox
 FnGetValue() {
     JKey="$2"
     echo $(echo "$1" | awk -F '[:,]' '/"'$JKey'"/ {gsub("[[:blank:]\"]+", "", $2); print $2; exit;}')
+}
+
+# First parameter is the source JSON, second is the key, and third is the pattern
+# This is useful when the key value is not unique
+# ## Note that simply parsing values with AWK is very hacky and relies on the input formatting too much. 
+FnGetValueAfterPattern() {
+    JKeyP="$2"
+    JPattern="$3"
+    # Keep only the contents after pattern matching
+    # awk '/"ei:0"/{p=1}p' < sample_values_NEW.json >> awk_output.sh
+    AfterPattern=$(echo "$1" | awk '/"'$JPattern'"/{p=1}p')
+    echo $(echo "$AfterPattern" | awk -F '[:,]' '/"'$JKeyP'"/ {gsub("[[:blank:]\"]+", "", $2); print $2; exit;}')
 }
 
 # Convert ecobee degrees F*10 to degrees C
@@ -94,8 +105,10 @@ if [ -n "$AccessToken" ]; then
     VentilatorMinOnTimeAway=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTimeAway)
     VentilatorMinOnTime=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTime)
     FanMinOnTime=$(FnGetValue "$RuntimeParameters" fanMinOnTime)
-    # TODO: only use main thermostat temperature for the calculation, average temperature skews absolute humidity and may cause incorrect operation in some cases
-    IndoorT=$(FnGetValue "$RuntimeParameters" actualTemperature)
+    # Only use main thermostat (ei:0) temperature for the calculation, average temperature skews absolute humidity and may cause incorrect operation in some cases
+    IndoorT=$(FnGetValueAfterPattern "$RuntimeParameters" value "ei:0")
+    ## Old version that takes average temperature; may be useful as a fallback
+    # IndoorT=$(FnGetValue "$RuntimeParameters" actualTemperature)
     IndoorRH=$(FnGetValue "$RuntimeParameters" actualHumidity)
     OutT=$(FnGetValue "$RuntimeParameters" temperature)
     OutRH=$(FnGetValue "$RuntimeParameters" relativeHumidity)
