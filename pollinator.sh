@@ -2,8 +2,8 @@
 # ### pollinator.sh: poll ecobee API and perform useful bee stuff ###
 # To deploy on DD-WRT using GUI, save as custom script in Administration/Commands and run the following command to rename
 # mv /tmp/custom.sh /jffs/scripts/pollinator.sh
-# Run every 7 minutes: put the settings below in "additional crontab" field and provide the actual path to the directory plus IP addresses
-# */7 * * * * root /jffs/scripts/pollinator.sh EcoDir EcoBIP CamIP "messenger.sh arguments"
+# Run every 2 minutes: put the settings below in "additional crontab" field and provide the actual path to the directory plus IP addresses
+# */2 * * * * root /jffs/scripts/pollinator.sh EcoDir EcoBIP CamIP "messenger.sh arguments"
 # ## Initial setup notes
 # ## Register as an ecobee developer, create an application and get the Client ID: https://www.ecobee.com/developers/
 # ## TODO: If there is demand, implement Normal ventilation mode in addition to Min and Max. Normal mode could be used when conditions are good - outdoor T & AH within 10%-20% of the indoor target. 
@@ -277,8 +277,8 @@ if [ -n "$HRVSetStatus" ]; then
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
-    # TODO: uncomment the next line to enable email notifications on start of the ventilation cycle
-    # "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)."
+    # TODO: un/comment the next line to enable/disable email notifications on start of each new ventilation cycle
+    # "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Indoor/outdoor T: $IndoorTC/$OutTC."
     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
 

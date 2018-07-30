@@ -14,7 +14,7 @@ EcoBDevSite="https://www.ecobee.com/developers/"
 #echo "DEBUG: Retrieved Refresh token from persistent storage: $RefreshToken" 2>&1 | logger -t WAGGLER
 
 # First parameter is the source JSON, and second is the key
-# TODO: switch to json.sh for proper JSON parsing
+# TODO: improve JSON parsing
 FnGetValue() {
     JKey="$2"
     echo $(echo "$1" | awk -F '[:,]' '/"'$JKey'"/ {gsub("[[:blank:]\"]+", "", $2); print $2; exit;}')
