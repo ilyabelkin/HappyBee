@@ -76,7 +76,6 @@ FnGetValueAfterPattern() {
     JKeyP="$2"
     JPattern="$3"
     # Keep only the contents after pattern matching
-    # awk '/"ei:0"/{p=1}p' < sample_values_NEW.json >> awk_output.sh
     AfterPattern=$(echo "$1" | awk '/"'$JPattern'"/{p=1}p')
     echo $(echo "$AfterPattern" | awk -F '[:,]' '/"'$JKeyP'"/ {gsub("[[:blank:]\"]+", "", $2); print $2; exit;}')
 }
@@ -277,9 +276,9 @@ if [ -n "$HRVSetStatus" ]; then
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
-    # TODO: un/comment the next line to enable/disable email notifications on start of each new ventilation cycle
-    # "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Indoor/outdoor T: $IndoorTC/$OutTC."
-    echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
+    # TODO: uncomment the next line to enable email notifications on start of the ventilation cycle
+    # "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
+     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
 
 # ## Perform additional ecobee diagnostics
