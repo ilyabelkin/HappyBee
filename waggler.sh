@@ -10,11 +10,11 @@ EcoDir="$1"
 ClientID="$2"
 Messenger="$3"
 RefreshToken=$(cat ${EcoDir}BDanceR)
+EcoBAPI="https://api.ecobee.com"
 EcoBDevSite="https://www.ecobee.com/developers/"
 #echo "DEBUG: Retrieved Refresh token from persistent storage: $RefreshToken" 2>&1 | logger -t WAGGLER
 
 # First parameter is the source JSON, and second is the key
-# TODO: improve JSON parsing
 FnGetValue() {
     JKey="$2"
     echo $(echo "$1" | awk -F '[:,]' '/"'$JKey'"/ {gsub("[[:blank:]\"]+", "", $2); print $2; exit;}')
@@ -23,7 +23,7 @@ FnGetValue() {
 if [ -n "$RefreshToken" ]; then
     # If refresh token is present, get a new access/refresh token pair
     # ## Note -k option is insecure, but necessary on some systems
-    TokenPair=$(curl -k -X POST "https://api.ecobee.com/token?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
+    TokenPair=$(curl -k -X POST "$EcoBAPI""/token?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
 else
     "$Messenger" "Alert: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite"
 fi

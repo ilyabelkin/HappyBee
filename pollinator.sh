@@ -6,8 +6,6 @@
 # */2 * * * * root /jffs/scripts/pollinator.sh EcoDir EcoBIP CamIP "messenger.sh arguments"
 # ## Initial setup notes
 # ## Register as an ecobee developer, create an application and get the Client ID: https://www.ecobee.com/developers/
-# ## TODO: If there is demand, implement Normal ventilation mode in addition to Min and Max. Normal mode could be used when conditions are good - outdoor T & AH within 10%-20% of the indoor target. 
-# ## It's currently not implemented, because that's usually a great time to open windows, and keeping automatic ventilation to a minimum is beneficial.
 # ## Note: a race condition exists when an access token expires when waggler.sh just refreshed it. Some operations would initially fail, but succeed on the next cycle
 # ## Note: to debug if something doesn't work in the script, redirect error output to a file: 2>/tmp/stderr.txt, and delete the file after reviewing the problem
 # ## A great book on Bourne Shell Scripting: https://en.wikibooks.org/wiki/Bourne_Shell_Scripting
@@ -27,6 +25,8 @@ Messenger="$4"
 # ## Constants
 # Current firmware version
 BFirmwareVersion="4.2.0.394"
+# Main censor ID
+BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
 FreezingRiskT=410
 # 92F/33.3C
@@ -46,7 +46,8 @@ VentMax=30
 VentFull=60
 # Furnace fan setting in Auto mode
 FanInAuto=0
-# Useful links; replace the PowerOffSite with the local electricity provider's Website outages link
+# Links; replace the PowerOffSite with the local electricity provider's Website outages link
+EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
 EcoBSite="http://ecobee.com"
 EcoBDevSite="https://www.ecobee.com/developers/"
 PowerOffSite="https://www.powerstream.ca/power-outages.html"
@@ -96,7 +97,7 @@ FnGetAccessToken
 if [ -n "$AccessToken" ]; then
     # Get runtime parameters
     ## Note -k option is insecure, but necessary on some systems
-    RuntimeParameters=$(curl -s -k -H "Content-Type: text/json" -H "Authorization: Bearer $AccessToken" 'https://api.ecobee.com/1/thermostat?format=json&body=\{"selection":\{"selectionType":"registered","selectionMatch":"","includeSensors":"true","includeVersion":"true","includeRuntime":"true","includeSettings":"true","includeWeather":"true"\}\}')
+    RuntimeParameters=$(curl -s -k -H "Content-Type: text/json" -H "Authorization: Bearer $AccessToken" "$EcoBAPI"'&body=\{"selection":\{"selectionType":"registered","selectionMatch":"","includeSensors":"true","includeVersion":"true","includeRuntime":"true","includeSettings":"true","includeWeather":"true"\}\}')
     
     DesiredHeat=$(FnGetValue "$RuntimeParameters" desiredHeat)
     DesiredCool=$(FnGetValue "$RuntimeParameters" desiredCool)
@@ -104,8 +105,8 @@ if [ -n "$AccessToken" ]; then
     VentilatorMinOnTimeAway=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTimeAway)
     VentilatorMinOnTime=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTime)
     FanMinOnTime=$(FnGetValue "$RuntimeParameters" fanMinOnTime)
-    # Only use main thermostat (ei:0) temperature for the calculation, average temperature skews absolute humidity and may cause incorrect operation in some cases
-    IndoorT=$(FnGetValueAfterPattern "$RuntimeParameters" value "ei:0")
+    # Only use main thermostat temperature for the calculation, average temperature skews absolute humidity and may cause incorrect operation in some cases
+    IndoorT=$(FnGetValueAfterPattern "$RuntimeParameters" value "$BMainID")
     ## Old version that takes average temperature; may be useful as a fallback
     # IndoorT=$(FnGetValue "$RuntimeParameters" actualTemperature)
     IndoorRH=$(FnGetValue "$RuntimeParameters" actualHumidity)
@@ -155,7 +156,7 @@ if [ -n "$FireCnt" ]; then
     # ## Note: The emergency procedure
     # If one of the sensors temperature >= set fire temperature, switch off heat and set HRV to 0 to restrict oxygen flow
     # Email and set the HVAC system to off mode; ecobee needs manual intervention to start again
-    EcoBOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "https://api.ecobee.com/1/thermostat?format=json")
+    EcoBOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
     # Check if operation was successful
     EcoBOffStatus=$(FnGetValue "$EcoBOff" message)
     "$Messenger" "Alert: Possible fire!" "$FireCnt sensor(s) report possible fire - temperature over the treshold! Check cameras and call 911 if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames: $SensorStateAll. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off the WI-FI router and turn on the Air Conditioner until the temperature is under 30C, then switch the router back on. Additional detail: $RuntimeParameters"
@@ -183,7 +184,7 @@ fi
 # Check if the security was on and only then switch off and send the alert about security being switched off
 if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     FnGetAccessToken
-    AwayOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22resumeProgram%22%2C%22params%22%3A%7B%22resumeAll%22%3Afalse%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "https://api.ecobee.com/1/thermostat?format=json")
+    AwayOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22resumeProgram%22%2C%22params%22%3A%7B%22resumeAll%22%3Afalse%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
     "$Messenger" "Alert: Security switched off." "Someone switched off security. Setting thermostat to Home mode. Occupancy: $SensorOccupancy"
     # Check if operation successful
     AwayOffStatus=$(FnGetValue "$AwayOff" message)
@@ -197,7 +198,7 @@ fi
 # Check if the security was off and only then switch on and send the alert about security being switched on
 if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
     FnGetAccessToken
-    AwayOn=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A608%2C%22coolHoldTemp%22%3A860%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "https://api.ecobee.com/1/thermostat?format=json")
+    AwayOn=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A608%2C%22coolHoldTemp%22%3A860%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
     "$Messenger" "Alert: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
     # Check if operation successful
     AwayOnStatus=$(FnGetValue "$AwayOn" message)
@@ -267,7 +268,7 @@ if [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$Ventila
     HRVAlreadySet=true
 elif [ -n "$IndoorRH" ]; then
     FnGetAccessToken
-    HRVSet=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22ventilatorMinOnTimeHome%22%3A$HRVHome%2C%22ventilatorMinOnTimeAway%22%3A$HRVAway%2C%22ventilatorMinOnTime%22%3A$HRVMin%2C%22fanMinOnTime%22%3A$FanInAuto%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "https://api.ecobee.com/1/thermostat?format=json")
+    HRVSet=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22ventilatorMinOnTimeHome%22%3A$HRVHome%2C%22ventilatorMinOnTimeAway%22%3A$HRVAway%2C%22ventilatorMinOnTime%22%3A$HRVMin%2C%22fanMinOnTime%22%3A$FanInAuto%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
     # Check if operation was successful
     HRVSetStatus=$(FnGetValue "$HRVSet" message)
 fi
@@ -276,8 +277,8 @@ if [ -n "$HRVSetStatus" ]; then
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
-    # TODO: uncomment the next line to enable email notifications on start of the ventilation cycle
-    # "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
+    # TODO: uncomment the next line to enable email notifications on start of each ventilation cycle
+     "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
      echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
 
