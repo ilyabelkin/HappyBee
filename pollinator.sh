@@ -294,7 +294,7 @@ if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
     EcoBPing=false 
 fi
 
-if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ] ; then  
+if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then  
   "$Messenger" "Alert: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. Additional detail: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
 fi
