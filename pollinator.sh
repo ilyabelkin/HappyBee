@@ -37,13 +37,15 @@ AwayHeatT=608
 AwayCoolT=860
 # 451F/232.7C - At this temperature books will likely spontaneously catch fire
 PaperIgnitionT=4510
+# The temperature at which lower humidity setting is used: -5C = 23F
+FrostT=230
+# Target Absolute Humidity (AH) of 9.7 g/m3 equals Relative Humidity (RH) of 50% at 22C
+TargetAHNormal=9.7
 # Target Absolute Humidity (AH) of 7.76 g/m3 equals Relative Humidity (RH) of 40% at 22C
-TargetAH=7.76
+TargetAHFrost=7.76
 VentLow=5
 VentMed=15
 VentMax=30
-# For future use
-VentFull=60
 # Furnace fan setting in Auto mode
 FanInAuto=0
 # Links; replace the PowerOffSite with the local electricity provider's Website outages link
@@ -215,12 +217,20 @@ if [ "$AwayMode" = true ] && [ "$OccupancyTriggered" = true ]; then
     "$Messenger" "Alert: $OccupancyCnt sensor(s) report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames $SensorStateAll."
 fi
 
+
+# ## Dynamically choose normal or lower humidity target to prevent windows frosting
+# ## To apply a frost control algorithm, use lower AH target during extreme cold outside to avoid windows frosting
+# ## Here's some info on the frost control: http://www.smarthomehub.net/forums/discussion/204/humidifier-and-window-efficiency
+if [ -n "$IndoorRH" ] && [ "$OutT" -lt "$FrostT" ]; then
+    TargetAH=$TargetAHFrost
+else
+    TargetAH=$TargetAHNormal
+fi
+# echo "DEBUG: TargetAH $TargetAH TargetAHNormal $TargetAHNormal TargetAHFrost $TargetAHFrost OutT $OutT FrostT $FrostT" 2>&1 | logger -t POLLINATOR
+
 # HRV Parameters (Note that ERV may not be efficient for humidity normalization, but humidity problems are also less likely for ERV owners)
 if [ -n "$IndoorRH" ]; then
     # Calculate actual Absolute Humidity (AH) using Peter Mander's formula: https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/
-    # TODO: contact Peter Mander when the testing is complete to reference the solution on his site
-    # ## To apply a frost control algorithm, the script could lower AH target to under 50% at 22C during extreme cold outside to avoid windows frosting, but this is likely not needed as extremely cold air holds little moisture.
-    # ## Here's some info on the frost control: http://www.smarthomehub.net/forums/discussion/204/humidifier-and-window-efficiency
     IndoorTC=$(FnToC "$IndoorT")
     OutTC=$(FnToC "$OutT")
     IndoorAH=$(FnToAH "$IndoorTC" "$IndoorRH")
@@ -229,7 +239,7 @@ if [ -n "$IndoorRH" ]; then
     # if indoor AH < target AH and outdoor AH > indoor AH, or
     # if indoor AH > target AH and outdoor AH < indoor AH, ventilate more
     MaxVentilate=$(echo "$IndoorAH $OutAH $TargetAH" | awk '{if (($1 < $3 && $2 > $1) || ($1 > $3 && $2 < $1)) print "true"}')
-    # echo "DEBUG: IndoorTC $IndoorTC OutTC $OutTC IndoorAH $IndoorAH, OutAH $OutAH" 2>&1 | logger -t POLLINATOR 
+    # echo "DEBUG: TargetAH $TargetAH IndoorTC $IndoorTC OutTC $OutTC IndoorAH $IndoorAH, OutAH $OutAH" 2>&1 | logger -t POLLINATOR 
 fi
 
 if [ "$MaxVentilate" = true ]; then
@@ -277,7 +287,7 @@ if [ -n "$HRVSetStatus" ]; then
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
-    # TODO: uncomment the next line to enable email notifications on start of each ventilation cycle
+    # TODO: comment the next line to disable email notifications on start of each ventilation cycle
      "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
      echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
@@ -297,4 +307,5 @@ fi
 if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then  
   "$Messenger" "Alert: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. Additional detail: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
+    #TODO: reboot the furnace if ecobee is hanging after a power surge
 fi

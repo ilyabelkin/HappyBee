@@ -53,7 +53,6 @@
 Any feedback is welcome. Please open an issue or submit a PR. Below are the areas where help is needed:
 
 * JSON parsing
-* Normal ventilation mode in addition to Min and Max
 * Improve fire detection by implementing heat rise detection & report which exact sensor reports the problem: 
   * [About Heat detectors](https://en.wikipedia.org/wiki/Heat_detector)
   * Rate of rise could be implemented in addition to the current fixed point
