@@ -7,6 +7,7 @@
 * **Humidity normalization** using a Heat Recovery Ventilator.
 * **Precise occupancy alerts** if movement was detected by one of the ecobee remote sensors (a.k.a. ["Suspicious Bees"](https://www.youtube.com/watch?v=bEwE4wyz00o&t=402))
 * **Emergency alerts** when ecobee thermostat is off in cold weather, lost power or disconnected
+* **Furnace and ecobee re-start** if the thermostat hangs after a short-term power outage. This requires a smart switch like (of course) Belkin Wemo Light Switch
 * **Fire detection** when one or more of the remote sensors or the thermostat itself (used as heat detectors) report temperature over a set threshold. This feature could be used in conjunction with actual smoke/carbon monoxide detection by additional equipment
 
 ## Warnings, notes and known issues
@@ -31,6 +32,7 @@
 * **waggler** is a bee that deals with auth and shares that info with other bees (i.e. pollinator)
 * **pollinator** bee polls ecobee API and performs useful stuff based on various conditions
 * **messenger** is a special bee that knows how to talk to humans (via email)
+* **[wemo_control_busyb.sh](https://gist.github.com/ilyabelkin/514fd5838ee9656df9f29ced74ad0b4b)** can switch your furnace back on to properly restart the thermostat after a power outage
 
 ### Built With
 
@@ -46,6 +48,7 @@
 * Copy scripts to the server (i.e. router)
 * Configure persistent storage and create a directory for tokens / occupancy state files
 * Configure email parameters in the messenger.sh
+* Optionally download and copy [wemo_control_busyb.sh](https://gist.github.com/ilyabelkin/514fd5838ee9656df9f29ced74ad0b4b) gist to the server
 * Configure crontab to run waggler and pollinator scripts on a schedule
 
 ## Contributing
@@ -66,3 +69,4 @@ Any feedback is welcome. Please open an issue or submit a PR. Below are the area
 
 * [DD-WRT community](https://www.dd-wrt.com/phpBB2/) for the messenger.sh
 * Peter Mander for his amazing [Relative to Absolute Humidity conversion formula](https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/)
+* Victor Mendonca for the original Wemo Control Bash script that I adapted to BusyBos/Ash: http://victormendonca.com, https://github.com/victorbrca

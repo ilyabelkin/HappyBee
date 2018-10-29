@@ -3,7 +3,7 @@
 # To deploy on DD-WRT using GUI, save as custom script in Administration/Commands and run the following command to rename
 # mv /tmp/custom.sh /jffs/scripts/pollinator.sh
 # Run every 2 minutes: put the settings below in "additional crontab" field and provide the actual path to the directory plus IP addresses
-# */2 * * * * root /jffs/scripts/pollinator.sh EcoDir EcoBIP CamIP "messenger.sh arguments"
+# */2 * * * * root /jffs/scripts/pollinator.sh EcoDir EcoBIP CamIP "/jffs/scripts/messenger.sh arguments" "/jffs/scripts/wemo_control_busyb.sh FurnaceSwitchIP"
 # ## Initial setup notes
 # ## Register as an ecobee developer, create an application and get the Client ID: https://www.ecobee.com/developers/
 # ## Note: a race condition exists when an access token expires when waggler.sh just refreshed it. Some operations would initially fail, but succeed on the next cycle
@@ -21,6 +21,7 @@ EcoDir="$1"
 EcoBIP="$2"
 CamIP="$3"
 Messenger="$4"
+FurnaceControl="$5"
 
 # ## Constants
 # Current firmware version
@@ -288,8 +289,8 @@ fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     # TODO: comment the next line to disable email notifications on start of each ventilation cycle
-     "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
-     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
+    "$Messenger" "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
+    echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
 
 # ## Perform additional ecobee diagnostics
@@ -305,7 +306,11 @@ if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
 fi
 
 if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then  
-  "$Messenger" "Alert: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. Additional detail: $RuntimeParameters"
+    "$Messenger" "Alert: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. Additional detail: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
-    #TODO: reboot the furnace if ecobee is hanging after a power surge
+    # Turn on the furnace if ecobee is hanging after a power surge or short-term outage
+    FurnaceState=$(echo $($FurnaceControl getstate))
+    FurnaceOn=$(echo $($FurnaceControl on))
+    ## Note: "Error" usually means the furnace was already on
+    "$Messenger" "Alert: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
 fi
