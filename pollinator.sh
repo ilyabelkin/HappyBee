@@ -32,6 +32,8 @@ BMainID=ei:0
 FreezingRiskT=410
 # 92F/33.3C
 FireRiskT=920
+# Default state
+AwayMode=false
 # 60.8F/16C
 AwayHeatT=608
 # 86F/30C
@@ -66,6 +68,16 @@ FnGetAccessToken() {
     fi
 }
 
+# Read the Away state from disc
+FnGetAwayState() {
+    AwayState=$(cat ${EcoDir}BAway)
+    if [ -n "$AwayState" ] && [ "$AwayState" -eq 1 ]; then
+        AwayMode=true
+    else
+        AwayMode=false
+    fi
+}
+
 # First parameter is the source JSON, and second is the key
 # ## Note that simply parsing values with AWK is very hacky and relies on the input formatting too much. 
 FnGetValue() {
@@ -94,7 +106,7 @@ FnToAH() {
     echo $(echo "$1 $2" | awk '{print (6.112 * (2.71828 ** ((17.67 * $1)/($1 + 243.5)) * $2 * 2.1674)/(273.15 + $1))}')
 }
 
-#Start by reading the access token from disc
+# Start by reading the access token from disc
 FnGetAccessToken
 
 if [ -n "$AccessToken" ]; then
@@ -168,12 +180,8 @@ if [ -n "$EcoBOffStatus" ]; then
     "$Messenger" "Alert: Failed to turn HVAC off during a possible fire!" "$EcoBOff"
 fi
 
-# if desiredHeat/Cool are already set to target values, just set the flag
-if [ -n "$DesiredHeat" ] && [ "$DesiredHeat" -eq "$AwayHeatT" ] && [ "$DesiredCool" -eq "$AwayCoolT" ]; then
-    AwayMode=true
-elif [ -n "$DesiredHeat" ]; then
-    AwayMode=false
-fi
+# Check the current Away state
+FnGetAwayState
 
 # Check if the cam is on
 # It's possible to either ping the cam as in the example below, or use curl to receive specific information
@@ -192,6 +200,8 @@ if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     # Check if operation successful
     AwayOffStatus=$(FnGetValue "$AwayOff" message)
     AwayMode=false
+    # Persist the Away state to disc
+    echo "0" > "${EcoDir}BAway"
     # echo "DEBUG: OffStatus $AwayOffStatus" 2>&1 | logger -t POLLINATOR
 fi
 if [ -n "$AwayOffStatus" ]; then
@@ -206,6 +216,8 @@ if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
     # Check if operation successful
     AwayOnStatus=$(FnGetValue "$AwayOn" message)
     AwayMode=true
+    # Persist the Away state to disc
+    echo "1" > "${EcoDir}BAway"
     # echo "DEBUG: OnStatus $AwayOnStatus" 2>&1 | logger -t POLLINATOR
 fi
 if [ -n "$AwayOnStatus" ]; then

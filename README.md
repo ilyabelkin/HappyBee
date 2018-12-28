@@ -2,7 +2,7 @@
 
 ## HappyBee is a companion set of features to complement ecobee smart thermostats
 
-* **Instant Home/Away mode** that's immediately triggered by turning on a security camera or another device. The native away mode takes hours to be triggered, and only when the conditions are ideal
+* **Instant Home/Away mode** that's immediately triggered by turning on a security camera or another device. The native away mode takes hours to be triggered, and only when the conditions are ideal. Temperature can still be controlled in the HappyBee Away mode.
 * HappyBee also **fixes a bug when HRV and furnace fan run indefinitely** when the native "Away for now" mode is triggered remotely via the ecobee app, API, IFTTT etc.
 * **Humidity normalization** using a Heat Recovery Ventilator.
 * **Precise occupancy alerts** if movement was detected by one of the ecobee remote sensors (a.k.a. ["Suspicious Bees"](https://www.youtube.com/watch?v=bEwE4wyz00o&t=402))
@@ -15,6 +15,7 @@
 * The scripts include functionality that could result in your equipment being switched off during an emergency; they are also not guaranteed to run without issues on specific hardware/software combinations or in case ecobee API is significantly updated
 * The scripts could be a starting point for your development project or serve as a proof of concept, without any guarantees or warranties implied. Please see [LICENSE.md](LICENSE.md) for additional notes
 * When one or more of the remote detectors is low on battery, it can report false occupancy and sometimes (rarely) a false alert may be generated
+* Please consult local Electrical Code, Building Code, Fire and other applicable regulations
 
 ## Getting Started
 
