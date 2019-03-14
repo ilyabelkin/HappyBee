@@ -1,19 +1,18 @@
 #!/bin/sh
 # ### messenger.sh: a special bee that knows how to talk to humans, e.g. through email ###
 # Adapted from: http://www.dd-wrt.com/phpBB2/viewtopic.php?t=288339&postdays=0&postorder=asc&start=15
-# Save as custom script and rename
-# mv /tmp/custom.sh /jffs/scripts/messenger.sh
+# Save as /opt/scripts/messenger.sh
 # This script sends an email through gmail
 # Version 1.1a (uses openssl)
 #
 # Note: you must turn ON "Access for less secure apps" in the Gmail settings: or use App Passwords
 # https://www.google.com/settings/security/lesssecureapps
-# It's recommended you create a separate Gmail account just for your router.
+# It's recommended you create a separate Gmail account just for your linux device.
 #####################################################################################
 # ## Note: specify the Google login information in the variables USER and PASS,
 # ## as well as the default email address you wish to use in DEFAULT (usually yourself!)
 #####################################################################################
-# Usage : /jffs/scripts/messenger.sh [recipient] subject body
+# Usage : sh /opt/scripts/messenger.sh [recipient] subject body
 # recipient : Can be omitted (will send to DEFAULT email address as set in the script)
 # subject : Subject of email
 # body : Body of email.  Use line feeds \n in body of message to force a carriage return.

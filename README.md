@@ -23,7 +23,7 @@
 
 * ecobee3 (tested) or ecobee4 thermostat with a static IP. Not recommended for ecobee lite: only a subset of the features may work
 * a security camera or another device that could indicate you are away, having a static IP or DNS name on the local network until the ventilation bug is fixed and built-in ecobee "Home for now / Away for now" functionality could be used instead
-* an always-on Linux server, i.e. DD-WRT (tested) or OpenWRT router, Raspberry Pi etc.
+* an always-on Linux server, i.e. openmediavault, Raspbian, DD-WRT router (see dd-drt branch) etc.
 * the server would need to have persistent storage (flash drive, SD card, SSD/HDD)
 
 ## Architecture
@@ -33,7 +33,7 @@
 * **waggler** is a bee that deals with auth and shares that info with other bees (i.e. pollinator)
 * **pollinator** bee polls ecobee API and performs useful stuff based on various conditions
 * **messenger** is a special bee that knows how to talk to humans (via email)
-* **[wemo_control_busyb.sh](https://gist.github.com/ilyabelkin/514fd5838ee9656df9f29ced74ad0b4b)** can switch your furnace back on to properly restart the thermostat after a power outage
+* **wemo_control_busyb.sh** can switch your furnace back on to properly restart the thermostat after a power outage
 
 ### Built With
 
@@ -46,10 +46,9 @@
 ### DD-WRT procedures are detailed in each individual script
 
 * Register as an ecobee developer and enroll your thermostat: [ecoobee Developers Website](https://www.ecobee.com/developers/)
-* Copy scripts to the server (i.e. router)
+* Copy scripts to the server (i.e. single-board computer or DD-WRT router)
 * Configure persistent storage and create a directory for tokens / occupancy state files
 * Configure email parameters in the messenger.sh
-* Optionally download and copy [wemo_control_busyb.sh](https://gist.github.com/ilyabelkin/514fd5838ee9656df9f29ced74ad0b4b) gist to the server
 * Configure crontab to run waggler and pollinator scripts on a schedule
 
 ## Contributing
@@ -70,4 +69,4 @@ Any feedback is welcome. Please open an issue or submit a PR. Below are the area
 
 * [DD-WRT community](https://www.dd-wrt.com/phpBB2/) for the messenger.sh
 * Peter Mander for his amazing [Relative to Absolute Humidity conversion formula](https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/)
-* Victor Mendonca for the original Wemo Control Bash script that I adapted to BusyBos/Ash: http://victormendonca.com, https://github.com/victorbrca
+* Victor Mendonca for the original Wemo Control Bash script that I adapted to BusyBox/Ash: http://victormendonca.com, https://github.com/victorbrca

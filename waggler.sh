@@ -1,10 +1,9 @@
 #!/bin/sh
 # ### waggler.sh: knows how to refresh ecobee tokens and talk to other bees ###
 # ### What is Waggle Dance? Check out https://www.youtube.com/watch?v=LA1OTMCJrT8#t=0m25s ###
-# To deploy on DD-WRT using GUI, save as custom script in Administration/Commands and run the following command to rename
-# mv /tmp/custom.sh /jffs/scripts/waggler.sh
-# Run every 20 minutes: put the settings below in "additional crontab" field and provide the actual path to the directory plus IP addresses
-# */20 * * * * root /jffs/scripts/waggler.sh EcoDir ClientID "messenger.sh arguments"
+# Save as /opt/scripts/waggler.sh
+# Run every 20 minutes: put the settings below in crontab and provide the actual path to the directory plus IP addresses
+# */20 * * * * root sh /opt/scripts/waggler.sh EcoDir ClientID "sh messenger.sh arguments"
 # ## The directory must already exist
 EcoDir="$1"
 ClientID="$2"
@@ -25,7 +24,7 @@ if [ -n "$RefreshToken" ]; then
     # ## Note -k option is insecure, but necessary on some systems
     TokenPair=$(curl -k -X POST "$EcoBAPI""/token?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
 else
-    "$Messenger" "Alert: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite"
+    $Messenger "Alert: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite"
 fi
 TokenPairStatus=$(FnGetValue "$TokenPair" message)
 # If the operation was successful, save the token to disc
@@ -38,5 +37,5 @@ if [ -n "$RefreshTokenNew" ]; then
     # Save the new AccessToken for the pollinator.sh script
     echo "$AccessToken" > "${EcoDir}BDanceA"
 else
-    "$Messenger" "Alert: failed to refresh token" "See possible reasons at: $EcoBDevSite More info: $TokenPair"
+    $Messenger "Alert: failed to refresh token" "See possible reasons at: $EcoBDevSite More info: $TokenPair"
 fi
