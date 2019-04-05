@@ -11,6 +11,7 @@ Messenger="$3"
 RefreshToken=$(cat ${EcoDir}BDanceR)
 EcoBAPI="https://api.ecobee.com"
 EcoBDevSite="https://www.ecobee.com/developers/"
+EcoBStatusSite="https://status.ecobee.com/"
 #echo "DEBUG: Retrieved Refresh token from persistent storage: $RefreshToken" 2>&1 | logger -t WAGGLER
 
 # First parameter is the source JSON, and second is the key
@@ -24,7 +25,7 @@ if [ -n "$RefreshToken" ]; then
     # ## Note -k option is insecure, but necessary on some systems
     TokenPair=$(curl -k -X POST "$EcoBAPI""/token?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
 else
-    $Messenger "Alert: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite"
+    $Messenger "Alert: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite. See status at: $EcoBStatusSite."
 fi
 TokenPairStatus=$(FnGetValue "$TokenPair" message)
 # If the operation was successful, save the token to disc
@@ -37,5 +38,5 @@ if [ -n "$RefreshTokenNew" ]; then
     # Save the new AccessToken for the pollinator.sh script
     echo "$AccessToken" > "${EcoDir}BDanceA"
 else
-    $Messenger "Alert: failed to refresh token" "See possible reasons at: $EcoBDevSite More info: $TokenPair"
+    $Messenger "Alert: failed to refresh token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $TokenPair"
 fi
