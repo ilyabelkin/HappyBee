@@ -54,6 +54,7 @@ FanInAuto=0
 EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
 EcoBSite="http://ecobee.com"
 EcoBDevSite="https://www.ecobee.com/developers/"
+EcoBStatusSite="https://status.ecobee.com/"
 PowerOffSite="https://www.powerstream.ca/power-outages.html"
 
 # Only AccessToken is needed by the pollinator.sh. Both Access and Refresh tokens are retrieved by waggler.sh
@@ -112,7 +113,7 @@ if [ -n "$AccessToken" ]; then
     # Get runtime parameters
     ## Note -k option is insecure, but necessary on some systems
     RuntimeParameters=$(curl -s -k -H "Content-Type: text/json" -H "Authorization: Bearer $AccessToken" "$EcoBAPI"'&body=\{"selection":\{"selectionType":"registered","selectionMatch":"","includeSensors":"true","includeVersion":"true","includeRuntime":"true","includeSettings":"true","includeWeather":"true"\}\}')
-    
+
     DesiredHeat=$(FnGetValue "$RuntimeParameters" desiredHeat)
     DesiredCool=$(FnGetValue "$RuntimeParameters" desiredCool)
     VentilatorMinOnTimeHome=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTimeHome)
@@ -150,7 +151,7 @@ if [ -n "$AccessToken" ]; then
     # Thermostat name and all sensor names
     SensorNames=$(echo "$RuntimeParameters" | awk -F '[:,]' '/"name"/ {gsub("[[:blank:]\"]+", "", $2); print $2; next}')
 else
-    $Messenger "Alert: missing access token" "See docs at: $EcoBDevSite More info: $RuntimeParameters"
+    $Messenger "Alert: missing access token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
 
 if [ -n "$OccupancyState" ]; then
@@ -295,33 +296,38 @@ elif [ -n "$IndoorRH" ]; then
     HRVSetStatus=$(FnGetValue "$HRVSet" message)
 fi
 if [ -n "$HRVSetStatus" ]; then
-    $Messenger "Alert: Failed to set HRV parameters" "$HRVSet"
+    $Messenger "Alert: Failed to set HRV parameters" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $HRVSet"
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     # TODO: comment the next line to disable email notifications on start of each ventilation cycle
-    $Messenger "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
+    # $Messenger "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
 fi
 
 # ## Perform additional ecobee diagnostics
 # Check that "hvacMode" is not off|cool) in winter months or when temperature is under a treshold inside or outside. Possible hvacMode values: auto auxHeatOnly cool heat off
 # It's possible to switch ecobee on automatically if no fire was detected, but this could prevent maintenance tasks in Winter.
-if [ "$FreezingRisk" = true ]; then  
+if [ "$FreezingRisk" = true ]; then
     $Messenger "Alert: ecobee thermostat is off in cold weather." "Ecobee thermostat is off or in cool mode during cold weather. In Winter pipes could freeze, please fix on site. Login to $EcoBSite to switch on heat. Additional detail: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
 fi
 
 if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
-    EcoBPing=false 
+    EcoBPing=false
 fi
 
-if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then  
-    $Messenger "Alert: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. Additional detail: $RuntimeParameters"
+if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then
+    $Messenger "Alert: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
-    # Turn on the furnace if ecobee is hanging after a power surge or short-term outage
+    # Decide to turn on the furnace if ecobee is hanging after a power surge or short-term outage
     FurnaceState=$(echo $($FurnaceControl getstate))
+else
+    FurnaceState="ON"
+fi
+
+# Attempt to turn on the furnace if it's not already "ON"
+if [ ! "$FurnaceState" = "ON" ]; then
     FurnaceOn=$(echo $($FurnaceControl on))
-    ## Note: "Error" usually means the furnace was already on
     $Messenger "Alert: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
 fi
