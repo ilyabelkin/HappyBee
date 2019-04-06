@@ -136,7 +136,7 @@ if [ -n "$AccessToken" ]; then
 
     FreezingRisk=$(echo "$IndoorT $OutT $EcoBMode $FreezingRiskT" | awk '{if (($1 < $4 || $2 < $4) && ($3 == "off" || $3 == "cool" )) print "true"}')
     # ## Currently "value" is only used for sensors temperature and occupancy, with possible values of "true" and "false"
-    # $SensorStateAll will contain all the occurences of "value", both temperature and occupancy states (and humidity if present)
+    # $SensorStateAll will contain all the occurences of "value": temperature, occupancy states and humidity if present
     SensorStateAll=$(echo "$RuntimeParameters" | awk -F '[:,]' '/"value"/ {gsub("[[:blank:]\"]+", "", $2); print $2;}')
 
     OccupancyCnt=$(echo "$SensorStateAll" | awk '/true/ {count++} END {print count}')
@@ -157,12 +157,13 @@ if [ -n "$AccessToken" ]; then
    
     # ## Rate of Rise (RoR) fire detection
     # Humidity is a different order of magnitude and does not affect the calculation
-    FireRoRTriggered=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if ($1-prev[FNR] >= RORT) {print "true";exit}}' ${EcoDir}BWarm -)
-    echo "DEBUG: FireRoRTriggered: $FireRoRTriggered. \n $SensorNames \n $SensorStateAll." 2>&1 | logger -t POLLINATOR
-    # $Messenger "Alert: Debugging Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRTriggered: $FireRoRTriggered. \n $SensorNames \n $SensorStateAll."
-
+    FireRoRDeltas=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100 && int($1)-int(prev[FNR]) >= RORT) {print int($1)-int(prev[FNR])}}' ${EcoDir}BWarm -)
+    SensorTHistory=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100) {print prev[FNR],$1 }}' ${EcoDir}BWarm -)
+   
     # Save the current state for the future
     echo "$SensorStateAll" > "${EcoDir}BWarm"
+    # echo "DEBUG: ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n$SensorTHistory." 2>&1 | logger -t POLLINATOR
+    # $Messenger "Alert: Debugging Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory."
 else
     $Messenger "Alert: missing access token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
@@ -179,7 +180,7 @@ if [ -n "$ThermostatFirmwareVersion" ] && [ ! "$ThermostatFirmwareVersion" = "$B
     $Messenger "Alert: Thermostat firmware was updated. Retest all functions!" "New version: $ThermostatFirmwareVersion"
 fi
 
-if [ -n "$FireCnt" ] || [ -n "$FireRoRTriggered" ]; then
+if [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     FnGetAccessToken
     # ## Note: The emergency procedure
     # If one of the sensors temperature >= set fire temperature, switch off heat and set HRV to 0 to restrict oxygen flow
@@ -188,7 +189,7 @@ if [ -n "$FireCnt" ] || [ -n "$FireRoRTriggered" ]; then
  
     # Check if operation was successful
     EcoBOffStatus=$(FnGetValue "$EcoBOff" message)
-    $Messenger "Alert: Possible fire!" "$FireCnt sensor(s) report temperature over the treshold. Rate of rise sensors state: $FireRoRTriggered. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames \n $SensorStateAll. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
+    $Messenger "Alert: Possible fire!" "[$FireCnt] fixed point heat sensor(s) report temperature over the treshold. Rate-of-rise heat sensors temperature difference in F*10: $FireRoRDeltas. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
 fi
 if [ -n "$EcoBOffStatus" ]; then
     $Messenger "Alert: Failed to turn HVAC off during a possible fire!" "$EcoBOff"
@@ -241,7 +242,7 @@ fi
 # Check if occupancy is triggered during Away
 if [ "$AwayMode" = true ] && [ "$OccupancyTriggered" = true ]; then
     # ## Note that RuntimeParameters are not included to allow threading of the emails in an email client in case too many are generated due to faulty sensor(s) state
-    $Messenger "Alert: $OccupancyCnt sensor(s) report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames \n $SensorStateAll."
+    $Messenger "Alert: $OccupancyCnt sensor(s) report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames\n$SensorStateAll."
 fi
 
 
@@ -291,7 +292,7 @@ fi
 # ## This cannot be controlled solely by ecobee, and could cause some fresh air to come in.
 # ## The script could also switch off FAN and HRV 20-min timers if they are used, but to introduce less potential complications will not touch these parameters.
 # ## Note: cannot set ventilatorMinOnTime to less than 5 min/hour; TODO: need to set to 0 if the behaviour is changed
-if [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRTriggered" ]; then
+if [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     HRVAway=0
     HRVHome=0
     HRVMin="$VentLow"
