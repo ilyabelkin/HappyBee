@@ -31,6 +31,8 @@ BMainID=ei:0
 FreezingRiskT=410
 # 92F/33.3C
 FireRiskT=920
+# Rate of Rise difference in temperature: 12F/6.7C
+RoRT=120
 # Default state
 AwayMode=false
 # 60.8F/16C
@@ -56,6 +58,7 @@ EcoBSite="http://ecobee.com"
 EcoBDevSite="https://www.ecobee.com/developers/"
 EcoBStatusSite="https://status.ecobee.com/"
 PowerOffSite="https://www.powerstream.ca/power-outages.html"
+EmergencyPhone="911"
 
 # Only AccessToken is needed by the pollinator.sh. Both Access and Refresh tokens are retrieved by waggler.sh
 # Read the new access token from disk
@@ -135,6 +138,7 @@ if [ -n "$AccessToken" ]; then
     # ## Currently "value" is only used for sensors temperature and occupancy, with possible values of "true" and "false"
     # $SensorStateAll will contain all the occurences of "value", both temperature and occupancy states (and humidity if present)
     SensorStateAll=$(echo "$RuntimeParameters" | awk -F '[:,]' '/"value"/ {gsub("[[:blank:]\"]+", "", $2); print $2;}')
+
     OccupancyCnt=$(echo "$SensorStateAll" | awk '/true/ {count++} END {print count}')
     OccupancyState=$(echo "$SensorStateAll" | awk -v FS='\n' '/true/ {os=os FS 1} /false/ {os=os FS 0}; END {print os}')
     # Perform Bitwise OR operation with each sensor state and then compare to the original. 
@@ -144,12 +148,21 @@ if [ -n "$AccessToken" ]; then
     # ## Note: if paste is not supported, the same result could be achieved with native awk
     OccupancyTriggered=$(echo "$OccupancyState" | awk 'NR==FNR{prev[FNR]=$1;next}; {if (prev[FNR]+$1 >= 1) o=1; else o=0; if (o==1 && o!=prev[FNR]) {print "true";exit}}' ${EcoDir}BHome -)
 
+    # Thermostat name and all sensor names
+    SensorNames=$(echo "$RuntimeParameters" | awk -F '[:,]' '/"name"/ {gsub("[[:blank:]\"]+", "", $2); print $2; next}')
+
     # Fire temperature treshold: at this point it's assumed the fire is on, and need to switch off the system. This should be tuned for a specific climate
     # An alternative approach that could be used in addition is to check for a smoke/CO alarm, which requires additional equipment
     FireCnt=$(echo "$SensorStateAll" | awk -v FRT=$FireRiskT '(int($1) >= FRT ) {count++} END {print count}')
+   
+    # ## Rate of Rise (RoR) fire detection
+    # Humidity is a different order of magnitude and does not affect the calculation
+    FireRoRTriggered=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if ($1-prev[FNR] >= RORT) {print "true";exit}}' ${EcoDir}BWarm -)
+    echo "DEBUG: FireRoRTriggered: $FireRoRTriggered. \n $SensorNames \n $SensorStateAll." 2>&1 | logger -t POLLINATOR
+    # $Messenger "Alert: Debugging Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRTriggered: $FireRoRTriggered. \n $SensorNames \n $SensorStateAll."
 
-    # Thermostat name and all sensor names
-    SensorNames=$(echo "$RuntimeParameters" | awk -F '[:,]' '/"name"/ {gsub("[[:blank:]\"]+", "", $2); print $2; next}')
+    # Save the current state for the future
+    echo "$SensorStateAll" > "${EcoDir}BWarm"
 else
     $Messenger "Alert: missing access token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
@@ -166,15 +179,16 @@ if [ -n "$ThermostatFirmwareVersion" ] && [ ! "$ThermostatFirmwareVersion" = "$B
     $Messenger "Alert: Thermostat firmware was updated. Retest all functions!" "New version: $ThermostatFirmwareVersion"
 fi
 
-if [ -n "$FireCnt" ]; then
+if [ -n "$FireCnt" ] || [ -n "$FireRoRTriggered" ]; then
     FnGetAccessToken
     # ## Note: The emergency procedure
     # If one of the sensors temperature >= set fire temperature, switch off heat and set HRV to 0 to restrict oxygen flow
     # Email and set the HVAC system to off mode; ecobee needs manual intervention to start again
     EcoBOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+ 
     # Check if operation was successful
     EcoBOffStatus=$(FnGetValue "$EcoBOff" message)
-    $Messenger "Alert: Possible fire!" "$FireCnt sensor(s) report possible fire - temperature over the treshold! Check cameras and call 911 if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames: $SensorStateAll. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off the WI-FI router and turn on the Air Conditioner until the temperature is under 30C, then switch the router back on. Additional detail: $RuntimeParameters"
+    $Messenger "Alert: Possible fire!" "$FireCnt sensor(s) report temperature over the treshold. Rate of rise sensors state: $FireRoRTriggered. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames \n $SensorStateAll. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
 fi
 if [ -n "$EcoBOffStatus" ]; then
     $Messenger "Alert: Failed to turn HVAC off during a possible fire!" "$EcoBOff"
@@ -227,7 +241,7 @@ fi
 # Check if occupancy is triggered during Away
 if [ "$AwayMode" = true ] && [ "$OccupancyTriggered" = true ]; then
     # ## Note that RuntimeParameters are not included to allow threading of the emails in an email client in case too many are generated due to faulty sensor(s) state
-    $Messenger "Alert: $OccupancyCnt sensor(s) report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames $SensorStateAll."
+    $Messenger "Alert: $OccupancyCnt sensor(s) report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames \n $SensorStateAll."
 fi
 
 
@@ -277,17 +291,18 @@ fi
 # ## This cannot be controlled solely by ecobee, and could cause some fresh air to come in.
 # ## The script could also switch off FAN and HRV 20-min timers if they are used, but to introduce less potential complications will not touch these parameters.
 # ## Note: cannot set ventilatorMinOnTime to less than 5 min/hour; TODO: need to set to 0 if the behaviour is changed
-if [ -n "$FireCnt" ]; then
+if [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRTriggered" ]; then
     HRVAway=0
     HRVHome=0
     HRVMin="$VentLow"
     FanInAuto=0
     MaxVentilate=false
+    HRVDoNotSet=true
 fi
 
 # Only set HRV parameters if they need to be different
-if [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$VentilatorMinOnTimeHome" -eq "$HRVHome" ] && [ "$VentilatorMinOnTimeAway" -eq "$HRVAway" ] && [ "$FanMinOnTime" -eq "$FanInAuto" ]; then
-    # Do nothing, everything is already set correctly
+if [ -n "$HRVDoNotSet" ] && [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$VentilatorMinOnTimeHome" -eq "$HRVHome" ] && [ "$VentilatorMinOnTimeAway" -eq "$HRVAway" ] && [ "$FanMinOnTime" -eq "$FanInAuto" ]; then
+    # Do nothing, everything is already set correctly. Keep the dummy line below.
     HRVAlreadySet=true
 elif [ -n "$IndoorRH" ]; then
     FnGetAccessToken
