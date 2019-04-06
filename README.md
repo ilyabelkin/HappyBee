@@ -4,11 +4,11 @@
 
 * **Instant Home/Away mode** that's immediately triggered by turning on a security camera or another device. The native away mode takes hours to be triggered, and only when the conditions are ideal. Temperature can still be controlled in the HappyBee Away mode.
 * HappyBee also **fixes a bug when HRV and furnace fan run indefinitely** when the native "Away for now" mode is triggered remotely via the ecobee app, API, IFTTT etc.
-* **Humidity normalization** using a Heat Recovery Ventilator.
+* **Humidity normalization** using a Heat Recovery Ventilator
 * **Precise occupancy alerts** if movement was detected by one of the ecobee remote sensors (a.k.a. ["Suspicious Bees"](https://www.youtube.com/watch?v=bEwE4wyz00o&t=402&cc_load_policy=1))
 * **Emergency alerts** when ecobee thermostat is off in cold weather, lost power or disconnected
 * **Furnace and ecobee re-start** if the thermostat hangs after a short-term power outage. This requires a smart switch like (of course) Belkin Wemo Light Switch
-* **Fire detection** when one or more of the remote sensors or the thermostat itself (used as heat detectors) report temperature over a fixed threshold or if there's a rapid rate of rise of the temperature ([About Heat detectors](https://en.wikipedia.org/wiki/Heat_detector). This feature could be used in conjunction with smoke/carbon monoxide detection by additional equipment
+* **Fire detection** when one or more remote sensors or the thermostat itself (used as heat detectors) report temperature over a fixed threshold or if there's a rapid rate of temperature rise: [About Heat detectors](https://en.wikipedia.org/wiki/Heat_detector). This feature could be used in conjunction with smoke/carbon monoxide detection by additional equipment
 
 ## Warnings, notes and known issues
 
@@ -53,15 +53,15 @@
 
 ## Contributing
 
-Any feedback is welcome. Please open an issue or submit a PR.
+Any feedback is welcome. Please open an issue or submit a PR
 
 ## License
 
-* This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+* This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 * Use of the ecobee API is subject to separate [licensing terms](https://www.ecobee.com/home/developer/api/introduction/licensing-agreement.shtml)
 
 ## Acknowledgments
 
 * [DD-WRT community](https://www.dd-wrt.com/phpBB2/) for the messenger.sh
 * Peter Mander for his amazing [Relative to Absolute Humidity conversion formula](https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/)
-* [Victor Mendonca](https://github.com/victorbrca) for the original Wemo Control Bash script that I adapted to BusyBox/Ash.
+* [Victor Mendonca](https://github.com/victorbrca) for the original Wemo Control Bash script that I also adapted to BusyBox/Ash
