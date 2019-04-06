@@ -31,8 +31,8 @@ BMainID=ei:0
 FreezingRiskT=410
 # 92F/33.3C
 FireRiskT=920
-# Rate of Rise difference in temperature: 12F/6.7C
-RoRT=120
+# Rate of Rise difference in temperature: standard is 12F/6.7C per minute
+RoRT=60
 # Default state
 AwayMode=false
 # 60.8F/16C
