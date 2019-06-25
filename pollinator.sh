@@ -24,7 +24,7 @@ FurnaceControl="$5"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="4.2.0.394"
+BFirmwareVersion="4.5.13.45"
 # Main censor ID
 BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
