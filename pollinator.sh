@@ -298,11 +298,10 @@ if [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     HRVMin="$VentLow"
     FanInAuto=0
     MaxVentilate=false
-    HRVDoNotSet=true
 fi
 
 # Only set HRV parameters if they need to be different
-if [ -n "$HRVDoNotSet" ] && [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$VentilatorMinOnTimeHome" -eq "$HRVHome" ] && [ "$VentilatorMinOnTimeAway" -eq "$HRVAway" ] && [ "$FanMinOnTime" -eq "$FanInAuto" ]; then
+if [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$VentilatorMinOnTimeHome" -eq "$HRVHome" ] && [ "$VentilatorMinOnTimeAway" -eq "$HRVAway" ] && [ "$FanMinOnTime" -eq "$FanInAuto" ]; then
     # Do nothing, everything is already set correctly. Keep the dummy line below.
     HRVAlreadySet=true
 elif [ -n "$IndoorRH" ]; then
@@ -311,14 +310,15 @@ elif [ -n "$IndoorRH" ]; then
     # Check if operation was successful
     HRVSetStatus=$(FnGetValue "$HRVSet" message)
 fi
+
 if [ -n "$HRVSetStatus" ]; then
     $Messenger "Alert: Failed to set HRV parameters" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $HRVSet"
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     # TODO: comment the next line to disable email notifications on start of each ventilation cycle
-    # $Messenger "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $(FnToC "$IndoorT"), for the calculation."
-    echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH)." 2>&1 | logger -t POLLINATOR
+    $Messenger "Alert: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC."
+    echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC." 2>&1 | logger -t POLLINATOR
 fi
 
 # ## Perform additional ecobee diagnostics
