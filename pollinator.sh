@@ -47,11 +47,14 @@ FrostT=230
 TargetAHNormal=9.7
 # Target Absolute Humidity (AH) of 7.76 g/m3 equals Relative Humidity (RH) of 40% at 22C
 TargetAHFrost=7.76
+# Ventilator (HRV or ERV) and furnace fan control parameters
 VentLow=5
 VentMed=15
 VentMax=30
-# Furnace fan setting in Auto mode
-FanInAuto=0
+FanLow=0
+FanMax=60
+# Temperature difference between any sensors to trigger recirculation mode, i.e. 3.5C = 6.3F or 4C = 7.2F
+RecircTDelta=63
 # Links; replace the PowerOffSite with the local electricity provider's Website outages link
 EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
 EcoBSite="http://ecobee.com"
@@ -154,7 +157,10 @@ if [ -n "$AccessToken" ]; then
     # Fire temperature treshold: at this point it's assumed the fire is on, and need to switch off the system. This should be tuned for a specific climate
     # An alternative approach that could be used in addition is to check for a smoke/CO alarm, which requires additional equipment
     FireCnt=$(echo "$SensorStateAll" | awk -v FRT=$FireRiskT '(int($1) >= FRT ) {count++} END {print count}')
-   
+    
+    # Convert all values to integers, ignore humidity and find the difference between maximum and minimum indoor temperature
+    IndoorTDelta=$(echo "$SensorStateAll" | awk 'NR == 1 {max=$1+0 ; min=$1+0} $1+0 >= max+0 {max = $1+0} $1 > 100 && $1 <= min+0 {min = $1+0} END { print max-min+0 }')
+
     # ## Rate of Rise (RoR) fire detection
     # Humidity is a different order of magnitude and does not affect the calculation
     FireRoRDeltas=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100 && int($1)-int(prev[FNR]) >= RORT) {print int($1)-int(prev[FNR])}}' ${EcoDir}BWarm -)
@@ -166,6 +172,14 @@ if [ -n "$AccessToken" ]; then
     # $Messenger "Alert: Debugging Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory."
 else
     $Messenger "Alert: missing access token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+fi
+
+# Set furnace fan run time in Auto mode
+if [ "$IndoorTDelta" -gt "$RecircTDelta" ]; then
+    FanInAuto="$FanMax"
+    # echo "DEBUG: Recirculation mode: true. Temperature difference between sensors in F*10 ($IndoorTDelta) is higher than the treshold ($RecircTDelta); furnace fan is set to recirculate the air. All sensors state: $SensorStateAll."
+else
+    FanInAuto="$FanLow"
 fi
 
 if [ -n "$OccupancyState" ]; then
@@ -281,7 +295,7 @@ fi
 if [ "$AwayMode" = true ]; then
     HRVMin="$HRVAway"
     HRVHome="$HRVAway"
-    FanInAuto=0
+    FanInAuto="$FanLow"
 else
     HRVMin="$HRVHome"
 fi
@@ -296,7 +310,7 @@ if [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     HRVAway=0
     HRVHome=0
     HRVMin="$VentLow"
-    FanInAuto=0
+    FanInAuto="$FanLow"
     MaxVentilate=false
 fi
 

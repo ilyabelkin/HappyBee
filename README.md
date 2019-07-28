@@ -3,8 +3,9 @@
 ## HappyBee is a companion set of features to complement ecobee smart thermostats
 
 * **Instant Home/Away mode** that's immediately triggered by turning on a security camera or another device. The native away mode takes hours to be triggered, and only when the conditions are ideal. Temperature can still be controlled in the HappyBee Away mode.
-* HappyBee also **fixes a bug when HRV and furnace fan run indefinitely** when the native "Away for now" mode is triggered remotely via the ecobee app, API, IFTTT etc.
-* **Humidity normalization** using a Heat Recovery Ventilator
+* HappyBee also **fixes a bug when Heat Recovery Ventilator (HRV) and furnace fan run indefinitely** when the native "Away for now" mode is triggered remotely via the ecobee app, API, IFTTT etc.
+* **Humidity normalization** using HRV, with frost control applied in Winter
+* **Temperature normalization** using the furnace blower when temparature difference between any sensors is over a treshold
 * **Precise occupancy alerts** if movement was detected by one of the ecobee remote sensors (a.k.a. ["Suspicious Bees"](https://www.youtube.com/watch?v=bEwE4wyz00o&t=402&cc_load_policy=1))
 * **Emergency alerts** when ecobee thermostat is off in cold weather, lost power or disconnected
 * **Furnace and ecobee re-start** if the thermostat hangs after a short-term power outage. This requires a smart switch like (of course) Belkin Wemo Light Switch
@@ -21,9 +22,9 @@
 
 ### Prerequisites and what's needed
 
-* ecobee3 (tested) or ecobee4 thermostat with a static IP. Not recommended for ecobee lite: only a subset of the features may work
+* ecobee3 (tested) or ecobee4 thermostat with a static IP. Not recommended for ecobee lite: only a subset of the features will be available
 * a security camera or another device that could indicate you are away, having a static IP or DNS name on the local network until the ventilation bug is fixed and built-in ecobee "Home for now / Away for now" functionality could be used instead
-* an always-on Linux server, i.e. openmediavault, Raspbian, DD-WRT router (see dd-drt branch) etc.
+* an always-on Linux server, i.e. openmediavault, Raspbian, DD-WRT router (no longer tested) etc.
 * the server would need to have persistent storage (flash drive, SD card, SSD/HDD)
 
 ## Architecture
@@ -41,9 +42,7 @@
 
 ## Installation & Deployment
 
-### The exact procedure will depend on your server; open an issue or PR if Raspberry Pi support is needed
-
-### DD-WRT procedures are detailed in each individual script
+### The exact procedure will depend on your server; open an issue or PR if a specific device support is needed
 
 * Register as an ecobee developer and enroll your thermostat: [ecoobee Developers Website](https://www.ecobee.com/developers/)
 * Copy scripts to the server (i.e. single-board computer or DD-WRT router)
@@ -64,4 +63,4 @@ Any feedback is welcome. Please open an issue or submit a PR
 
 * [DD-WRT community](https://www.dd-wrt.com/phpBB2/) for the messenger.sh
 * Peter Mander for his amazing [Relative to Absolute Humidity conversion formula](https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/)
-* [Victor Mendonca](https://github.com/victorbrca) for the original Wemo Control Bash script that I also adapted to BusyBox/Ash
+* [Victor Mendonca](https://github.com/victorbrca) for the original Wemo Control Bash script that I adapted to BusyBox/Ash
