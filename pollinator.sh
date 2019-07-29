@@ -54,7 +54,7 @@ VentMax=30
 FanLow=0
 FanMax=60
 # Temperature difference between any sensors to trigger recirculation mode, i.e. 3.5C = 6.3F or 4C = 7.2F
-RecircTDelta=63
+RecircTDelta=72
 # Links; replace the PowerOffSite with the local electricity provider's Website outages link
 EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
 EcoBSite="http://ecobee.com"
