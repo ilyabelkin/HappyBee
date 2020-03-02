@@ -24,7 +24,7 @@ FurnaceControl="$5"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="4.5.13.45"
+BFirmwareVersion="4.5.57.72"
 # Main censor ID
 BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
@@ -53,8 +53,8 @@ VentMed=15
 VentMax=30
 FanLow=0
 FanMax=60
-# Temperature difference between any sensors to trigger recirculation mode, i.e. 3.5C = 6.3F or 4C = 7.2F
-RecircTDelta=72
+# Temperature difference between any sensors to trigger recirculation mode, i.e. 3.5C = 6.3F, 4C = 7.2F, 4.5C = 8.1F, 5C = 9.0F
+RecircTDelta=81
 # Links; replace the PowerOffSite with the local electricity provider's Website outages link
 EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
 EcoBSite="http://ecobee.com"
