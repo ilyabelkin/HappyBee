@@ -10,6 +10,8 @@
 * **Emergency alerts** when ecobee thermostat is off in cold weather, lost power or disconnected
 * **Furnace and ecobee re-start** if the thermostat hangs after a short-term power outage. This requires a smart switch like (of course) Belkin Wemo Light Switch
 * **Fire detection** when one or more remote sensors or the thermostat itself (used as heat detectors) report temperature over a fixed threshold or if there's a rapid rate of temperature rise: [About Heat detectors](https://en.wikipedia.org/wiki/Heat_detector). This feature could be used in conjunction with smoke/carbon monoxide detection by additional equipment
+* **Trigger IFTTT Webhooks** when a critical event occurs
+* **Rate-limit** non-critical messages
 
 ## Warnings, notes and known issues
 
@@ -33,7 +35,7 @@
 
 * **waggler** is a bee that deals with auth and shares that info with other bees (i.e. pollinator)
 * **pollinator** bee polls ecobee API and performs useful stuff based on various conditions
-* **messenger** is a special bee that knows how to talk to humans (via email)
+* **messenger** is a special bee that knows how to talk to humans (via email or IFTTT Webhooks, allowing phone/VOIP calls, text, and more)
 * **wemo_control_busyb.sh** can switch your furnace back on to properly restart the thermostat after a power outage
 
 ### Built With
@@ -45,7 +47,7 @@
 ### The exact procedure will depend on your server; open an issue or PR if a specific device support is needed
 
 * Register as an ecobee developer and enroll your thermostat: [ecoobee Developers Website](https://www.ecobee.com/developers/)
-* Copy scripts to the server (i.e. single-board computer or DD-WRT router)
+* Copy scripts to the server (i.e. single-board computer like Raspberry Pi or a DD-WRT router)
 * Configure persistent storage and create a directory for tokens / occupancy state files
 * Configure email parameters in the messenger.sh
 * Configure crontab to run waggler and pollinator scripts on a schedule

@@ -169,9 +169,9 @@ if [ -n "$AccessToken" ]; then
     # Save the current state for the future
     echo "$SensorStateAll" > "${EcoDir}BWarm"
     # echo "DEBUG: ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n$SensorTHistory." 2>&1 | logger -t POLLINATOR
-    # $Messenger "INFO: Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory."
+    # $Messenger "poll0010" "DEBUG: Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory."
 else
-    $Messenger "WARNING: missing access token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+    $Messenger "poll0020" "WARNING: missing access token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
 
 # Set furnace fan run time in Auto mode
@@ -191,7 +191,7 @@ fi
 
 # Notify about changes in version, just in case: this doesn't protect from API changes, but testing is likely required
 if [ -n "$ThermostatFirmwareVersion" ] && [ ! "$ThermostatFirmwareVersion" = "$BFirmwareVersion" ]; then
-    $Messenger "INFO: Thermostat firmware was updated. Retest all functions!" "New version: $ThermostatFirmwareVersion"
+    $Messenger "poll0030" "INFO: Thermostat firmware was updated. Retest all functions!" "New version: $ThermostatFirmwareVersion"
 fi
 
 if [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
@@ -203,10 +203,10 @@ if [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
  
     # Check if operation was successful
     EcoBOffStatus=$(FnGetValue "$EcoBOff" message)
-    $Messenger "CRITICAL: Possible fire!" "[$FireCnt] fixed point heat sensor(s) report temperature over the treshold. Rate-of-rise heat sensors temperature difference in F*10: $FireRoRDeltas. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
+    $Messenger "poll0040" "CRITICAL: Possible fire!" "[$FireCnt] fixed point heat sensor(s) report temperature over the treshold. Rate-of-rise heat sensors temperature difference in F*10: $FireRoRDeltas. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
 fi
 if [ -n "$EcoBOffStatus" ]; then
-    $Messenger "ERROR: Failed to turn HVAC off during a possible fire!" "$EcoBOff"
+    $Messenger "poll0045" "ERROR: Failed to turn HVAC off during a possible fire!" "$EcoBOff"
 fi
 
 # Check the current Away state
@@ -225,7 +225,7 @@ fi
 if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     FnGetAccessToken
     AwayOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22resumeProgram%22%2C%22params%22%3A%7B%22resumeAll%22%3Afalse%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
-    $Messenger "WARNING: Security switched off." "Someone switched off security. Setting thermostat to Home mode. Occupancy: $SensorOccupancy"
+    $Messenger "poll0050" "DEBUG: Security switched off." "Someone switched off security. Setting thermostat to Home mode. Occupancy: $SensorOccupancy"
     # Check if operation successful
     AwayOffStatus=$(FnGetValue "$AwayOff" message)
     AwayMode=false
@@ -234,14 +234,14 @@ if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     # echo "DEBUG: OffStatus $AwayOffStatus" 2>&1 | logger -t POLLINATOR
 fi
 if [ -n "$AwayOffStatus" ]; then
-    $Messenger "ERROR: Failed to switch security off." "$AwayOff. Occupancy: $SensorOccupancy"
+    $Messenger "poll0055"  "ERROR: Failed to switch security off." "$AwayOff. Occupancy: $SensorOccupancy"
 fi
 
 # Check if the security was off and only then switch on and send the alert about security being switched on
 if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
     FnGetAccessToken
     AwayOn=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A608%2C%22coolHoldTemp%22%3A860%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
-    $Messenger "WARNING: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
+    $Messenger "poll0060" "DEBUG: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
     # Check if operation successful
     AwayOnStatus=$(FnGetValue "$AwayOn" message)
     AwayMode=true
@@ -250,13 +250,13 @@ if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
     # echo "DEBUG: OnStatus $AwayOnStatus" 2>&1 | logger -t POLLINATOR
 fi
 if [ -n "$AwayOnStatus" ]; then
-    $Messenger "ERROR: Failed to switch security on." "$AwayOn. Occupancy: $SensorOccupancy"
+    $Messenger "poll0065" "ERROR: Failed to switch security on." "$AwayOn. Occupancy: $SensorOccupancy"
 fi
 
 # Check if occupancy is triggered during Away
 if [ "$AwayMode" = true ] && [ "$OccupancyTriggered" = true ]; then
     # ## Note that RuntimeParameters are not included to allow threading of the emails in an email client in case too many are generated due to faulty sensor(s) state
-    $Messenger "CRITICAL: $OccupancyCnt sensors report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames\n$SensorStateAll."
+    $Messenger "poll0070" "CRITICAL: $OccupancyCnt sensors report occupancy, check cameras!" "Occupancy: $SensorOccupancy. The sensors might report occupancy for several minutes after the occurence. Here's detailed sensors state: $SensorNames\n$SensorStateAll."
 fi
 
 
@@ -326,12 +326,12 @@ elif [ -n "$IndoorRH" ]; then
 fi
 
 if [ -n "$HRVSetStatus" ]; then
-    $Messenger "INFO: Failed to set HRV parameters" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $HRVSet"
+    $Messenger "poll0080" "WARNING: Failed to set HRV parameters" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $HRVSet"
 fi
 # Only notify about Maximum Ventilation once every consecutive cycle starts, otherwise will be emailed every X minutes
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     # TODO: comment the next line to disable email notifications on start of each ventilation cycle
-    # $Messenger "INFO: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC."
+    # $Messenger "poll0083" "INFO: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC."
     # echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC." 2>&1 | logger -t POLLINATOR
 fi
 
@@ -339,7 +339,7 @@ fi
 # Check that "hvacMode" is not off|cool) in winter months or when temperature is under a treshold inside or outside. Possible hvacMode values: auto auxHeatOnly cool heat off
 # It's possible to switch ecobee on automatically if no fire was detected, but this could prevent maintenance tasks in Winter.
 if [ "$FreezingRisk" = true ]; then
-    $Messenger "WARNING: ecobee thermostat is off in cold weather." "Ecobee thermostat is off or in cool mode during cold weather. In Winter pipes could freeze, please fix on site. Login to $EcoBSite to switch on heat. Additional detail: $RuntimeParameters"
+    $Messenger "poll0090" "WARNING: ecobee thermostat is off in cold weather." "Ecobee thermostat is off or in cool mode during cold weather. In Winter pipes could freeze, please fix on site. Login to $EcoBSite to switch on heat. Additional detail: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
 fi
 
@@ -348,7 +348,7 @@ if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
 fi
 
 if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then
-    $Messenger "WARNING: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+    $Messenger "poll0100" "WARNING: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
     # Decide to turn on the furnace if ecobee is hanging after a power surge or short-term outage
     FurnaceState=$(echo $($FurnaceControl getstate))
@@ -359,5 +359,5 @@ fi
 # Attempt to turn on the furnace if it's not already "ON"
 if [ ! "$FurnaceState" = "ON" ]; then
     FurnaceOn=$(echo $($FurnaceControl on))
-    $Messenger "WARNING: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
+    $Messenger "poll0110" "WARNING: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
 fi

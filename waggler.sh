@@ -25,7 +25,7 @@ if [ -n "$RefreshToken" ]; then
     # ## Note -k option is insecure, but necessary on some systems
     TokenPair=$(curl -k -X POST "$EcoBAPI""/token?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
 else
-    $Messenger "WARNING: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite. See status at: $EcoBStatusSite."
+    $Messenger "wagg0010" "ERROR: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite. See status at: $EcoBStatusSite."
 fi
 TokenPairStatus=$(FnGetValue "$TokenPair" message)
 # If the operation was successful, save the token to disc
@@ -38,5 +38,5 @@ if [ -n "$RefreshTokenNew" ]; then
     # Save the new AccessToken for the pollinator.sh script
     echo "$AccessToken" > "${EcoDir}BDanceA"
 else
-    $Messenger "WARNING: failed to refresh token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $TokenPair"
+    $Messenger "wagg0020" "WARNING: failed to refresh token" "See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $TokenPair"
 fi
