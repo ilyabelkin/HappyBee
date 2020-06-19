@@ -43,12 +43,12 @@ RL_LEVEL="INFO"
 fi
 
 if [ -n "$RL_LEVEL" ] && [ "$(find "${RL_DIR}messenger.${ID}" -type f)" ] && [ ! "$(find "${RL_DIR}messenger.${ID}" -type f -mmin +"${!RL_LEVEL}")" ]; then
-echo -n 'Exiting due to rate-limit ' $RL_LEVEL 2>&1 | logger -t MESSENGER
+echo -n 'Exiting due to rate-limit ' $ID $RL_LEVEL 2>&1 | logger -t MESSENGER
 exit 0
 fi
 
 # Show that something is happening (-n doesn't send a line feed)
-echo -n 'Emailing to ' $RECIPIENT $RECIPIENT2 ' about ' $SUBJECT 2>&1 | logger -t MESSENGER
+echo -n 'Emailing to ' $RECIPIENT $RECIPIENT2 ' about ' $ID $SUBJECT 2>&1 | logger -t MESSENGER
 # Parenthesis to start a "subshell" that will pass commands to openssl through a pipe
 (
 # This is the Gmail login for your router's special Gmail address

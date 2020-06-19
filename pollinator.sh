@@ -234,7 +234,7 @@ if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     # echo "DEBUG: OffStatus $AwayOffStatus" 2>&1 | logger -t POLLINATOR
 fi
 if [ -n "$AwayOffStatus" ]; then
-    $Messenger "poll0055"  "ERROR: Failed to switch security off." "$AwayOff. Occupancy: $SensorOccupancy"
+    $Messenger "poll0055" "ERROR: Failed to switch security off." "$AwayOff. Occupancy: $SensorOccupancy"
 fi
 
 # Check if the security was off and only then switch on and send the alert about security being switched on
@@ -332,7 +332,7 @@ fi
 if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     # TODO: comment the next line to disable email notifications on start of each ventilation cycle
     # $Messenger "poll0083" "INFO: Maximum Ventilation mode cycle started" "Great news! The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC."
-    # echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC." 2>&1 | logger -t POLLINATOR
+    echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC." 2>&1 | logger -t POLLINATOR
 fi
 
 # ## Perform additional ecobee diagnostics
@@ -345,6 +345,7 @@ fi
 
 if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
     EcoBPing=false
+    $Messenger "poll0101" "WARNING: ecobee thermostat disconnected locally." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
 
 if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then
