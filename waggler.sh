@@ -2,16 +2,11 @@
 # ### waggler.sh: knows how to refresh ecobee tokens and talk to other bees ###
 # ### What is Waggle Dance? Check out https://www.youtube.com/watch?v=LA1OTMCJrT8#t=0m25s ###
 # Save as /opt/scripts/waggler.sh
-# Run every 20 minutes: put the settings below in crontab and provide the actual path to the directory plus IP addresses
-# */20 * * * * root sh /opt/scripts/waggler.sh EcoDir ClientID "sh messenger.sh arguments"
-# ## The directory must already exist
-EcoDir="$1"
-ClientID="$2"
-Messenger="$3"
+# Run every 20 minutes: put the settings below in crontab and remember to update parameters in the configuration file
+# */20 * * * * root sh /opt/scripts/waggler.sh
+. /opt/scripts/happyb_config.sh
+
 RefreshToken=$(cat ${EcoDir}BDanceR)
-EcoBAPI="https://api.ecobee.com"
-EcoBDevSite="https://www.ecobee.com/developers/"
-EcoBStatusSite="https://status.ecobee.com/"
 #echo "DEBUG: Retrieved Refresh token from persistent storage: $RefreshToken" 2>&1 | logger -t WAGGLER
 
 # First parameter is the source JSON, and second is the key
@@ -23,9 +18,9 @@ FnGetValue() {
 if [ -n "$RefreshToken" ]; then
     # If refresh token is present, get a new access/refresh token pair
     # ## Note -k option is insecure, but necessary on some systems
-    TokenPair=$(curl -k -X POST "$EcoBAPI""/token?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
+    TokenPair=$(curl -k -X POST "$EcoBAuth""?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
 else
-    $Messenger "wagg0010" "ERROR: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage: $EcoBDevSite. See status at: $EcoBStatusSite."
+    $Messenger "wagg0010" "ERROR: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage $EcoDir. See $EcoBDevSite. See status at: $EcoBStatusSite."
 fi
 TokenPairStatus=$(FnGetValue "$TokenPair" message)
 # If the operation was successful, save the token to disc

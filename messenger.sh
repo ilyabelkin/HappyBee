@@ -16,34 +16,47 @@
 # body : Body of email.  Use line feeds \n in body of message to force a carriage return.
 #
 # The recipient emails, login and password, as well as Webhooks are stored in a configuration file:
-. /opt/scripts/messenger_config.sh
+. /opt/scripts/happyb_config.sh
 
 # Pick out id, subject and body from arguments
 ID=$1
 SUBJECT=$2
 BODY=$3
 
-# Trigger Webhook(s) if the event is critical
-if [ -n "$WEBHOOK_EVENT" ] && [ "$SUBJECT" != "${SUBJECT%"CRITICAL:"*}" ]; then
-    echo -n 'Triggering Webhook Event ' $WEBHOOK_EVENT 2>&1 | logger -t MESSENGER
+# Rate-limit messages. Only the first message with the same ID within a specifc time interval is delivered
+if [ "$SUBJECT" != "${SUBJECT%"CRITICAL:"*}" ]; then
+    RL_LEVEL="CRITICAL"
+    RL_LIMIT=$CRITICAL
+elif [ "$SUBJECT" != "${SUBJECT%"ERROR:"*}" ]; then
+    RL_LEVEL="ERROR"
+    RL_LIMIT=$ERROR
+elif [ "$SUBJECT" != "${SUBJECT%"WARNING:"*}" ]; then
+    RL_LEVEL="WARNING"
+    RL_LIMIT=$WARNING
+elif [ "$SUBJECT" != "${SUBJECT%"INFO:"*}" ]; then
+    RL_LEVEL="INFO"
+    RL_LIMIT=$INFO
+fi
+
+if [ -n "$RL_LEVEL" ] && [ "$(find "${EcoDirTemp}messenger.${ID}" -type f)" ] && [ ! "$(find "${EcoDirTemp}messenger.${ID}" -type f -mmin +"$RL_LIMIT")" ]; then
+    RL_ON="true"
+    # echo -n 'Rate limiting switched on' $ID $RL_LEVEL $RL_LIMIT minutes $RL_ON 2>&1 | logger -t MESSENGER
+fi
+
+# Trigger Webhook(s) if the event is critical and not rate-limited
+if [ ! -n "$RL_ON" ] && [ -n "$WEBHOOK_EVENT" ] && [ "$RL_LEVEL" = "CRITICAL" ]; then
+    echo -n 'Triggering Webhook Event' $WEBHOOK_EVENT 2>&1 | logger -t MESSENGER
     curl -X POST -H "Content-Type: application/json" -d '{"value1":"'"$SUBJECT"'","value2":"Check email for more information.","value3":"'"$ID"'"}' https://maker.ifttt.com/trigger/$WEBHOOK_EVENT/with/key/$WEBHOOK_KEY
 fi
-if [ -n "$WEBHOOK2_EVENT" ] && [ "$SUBJECT" != "${SUBJECT%"CRITICAL:"*}" ]; then
-    echo -n 'Triggering Webhook Event ' $WEBHOOK2_EVENT 2>&1 | logger -t MESSENGER
+
+if [ ! -n "$RL_ON" ] && [ -n "$WEBHOOK2_EVENT" ] && [ "$RL_LEVEL" = "CRITICAL" ]; then
+    echo -n 'Triggering Webhook Event' $WEBHOOK2_EVENT 2>&1 | logger -t MESSENGER
     curl -X POST -H "Content-Type: application/json" -d '{"value1":"'"$SUBJECT"'","value2":"Check email for more information.","value3":"'"$ID"'"}' https://maker.ifttt.com/trigger/$WEBHOOK2_EVENT/with/key/$WEBHOOK2_KEY
 fi
 
-# Rate-limit non-critical messages. Only the first message with the same ID within a specifc time interval is delivered
-if [ "$SUBJECT" != "${SUBJECT%"ERROR:"*}" ]; then 
-RL_LEVEL="ERROR"
-elif [ "$SUBJECT" != "${SUBJECT%"WARNING:"*}" ]; then 
-RL_LEVEL="WARNING"
-elif [ "$SUBJECT" != "${SUBJECT%"INFO:"*}" ]; then 
-RL_LEVEL="INFO"
-fi
-
-if [ -n "$RL_LEVEL" ] && [ "$(find "${RL_DIR}messenger.${ID}" -type f)" ] && [ ! "$(find "${RL_DIR}messenger.${ID}" -type f -mmin +"${!RL_LEVEL}")" ]; then
-echo -n 'Exiting due to rate-limit ' $ID $RL_LEVEL 2>&1 | logger -t MESSENGER
+# only rate-limit non-critical email
+if [ -n "$RL_ON" ] && [ ! "$RL_LEVEL" = "CRITICAL" ]; then
+echo -n 'Exiting due to rate-limit' $ID $RL_LEVEL $RL_LIMIT minutes 2>&1 | logger -t MESSENGER
 exit 0
 fi
 
@@ -79,7 +92,7 @@ openssl s_client -connect smtp.gmail.com:587 -starttls smtp -crlf -ign_eof -quie
 echo ' Email sent!' 2>&1 | logger -t MESSENGER
 
 # save the rate-limit marker
-if [ -n "$RL_LEVEL" ]; then
-echo -n 'Save rate-limit marker ' $RL_LEVEL "${RL_DIR}messenger.${ID}" 2>&1 | logger -t MESSENGER
-touch "${RL_DIR}messenger.${ID}"
+if [ ! -n "$RL_ON" ] && [ -n "$RL_LEVEL" ]; then
+echo -n 'Save rate-limit marker ' $RL_LEVEL "${EcoDirTemp}messenger.${ID}" 2>&1 | logger -t MESSENGER
+touch "${EcoDirTemp}messenger.${ID}"
 fi

@@ -49,7 +49,7 @@
 * Register as an ecobee developer and enroll your thermostat: [ecoobee Developers Website](https://www.ecobee.com/developers/)
 * Copy scripts to the server (i.e. single-board computer like Raspberry Pi or a DD-WRT router)
 * Configure persistent storage and create a directory for tokens / occupancy state files
-* Configure email parameters in the messenger.sh
+* Configure email parameters in the happyb_config.sh
 * Configure crontab to run waggler and pollinator scripts on a schedule
 
 ## Contributing

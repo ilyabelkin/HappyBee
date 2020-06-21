@@ -1,8 +1,8 @@
 #!/bin/sh
 # ### pollinator.sh: poll ecobee API and perform useful bee stuff ###
 # Save as /opt/scripts/pollinator.sh
-# Run every 2 minutes: put the settings below in crontab and provide the actual path to the directory plus IP addresses
-# */2 * * * * root sh /opt/scripts/pollinator.sh EcoDir EcoBIP CamIP "sh /opt/scripts/messenger.sh arguments" "sh /opt/scripts/wemo_control_busyb.sh FurnaceSwitchIP"
+# Run every 2 minutes: put the settings below in crontab and remember to update parameters in the configuration file
+# */2 * * * * root sh /opt/scripts/pollinator.sh
 # ## Initial setup notes
 # ## Register as an ecobee developer, create an application and get the Client ID: https://www.ecobee.com/developers/
 # ## Note: a race condition exists when an access token expires when waggler.sh just refreshed it. Some operations would initially fail, but succeed on the next cycle
@@ -10,58 +10,11 @@
 # ## A great book on Bourne Shell Scripting: https://en.wikibooks.org/wiki/Bourne_Shell_Scripting
 #
 # ## TODO: Trigger an emergency procedure (HVAC shut-off) during Smoke/CO events using additional equipment, i.e. Kidde relay interconnect
-# COAlarm=(cat ${EcoDir}COAlarm)
-# SmokeAlarm=(cat ${EcoDir}SmokeAlarm)
+# COAlarm=(cat ${EcoDirTemp}COAlarm)
+# SmokeAlarm=(cat ${EcoDirTemp}SmokeAlarm)
 # ## Fire alert and basic emergency procedures are already implemented based on the remote sensors temperature reading, using them as heat detectors
 
-# Get the directory name to be able to read persistent info like tokens (BDance files) and previous occupancy state marker (BHome) from disc.
-# ## The directory must already exist
-EcoDir="$1"
-EcoBIP="$2"
-CamIP="$3"
-Messenger="$4"
-FurnaceControl="$5"
-
-# ## Constants
-# Current firmware version
-BFirmwareVersion="4.6.3.60"
-# Main censor ID
-BMainID=ei:0
-# Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
-FreezingRiskT=410
-# 92F/33.3C
-FireRiskT=920
-# Rate of Rise difference in temperature: standard is 12F/6.7C per minute
-RoRT=60
-# Default state
-AwayMode=false
-# 60.8F/16C
-AwayHeatT=608
-# 86F/30C
-AwayCoolT=860
-# 451F/232.7C - At this temperature books will likely spontaneously catch fire
-PaperIgnitionT=4510
-# The temperature at which lower humidity setting is used: -5C = 23F
-FrostT=230
-# Target Absolute Humidity (AH) of 9.7 g/m3 equals Relative Humidity (RH) of 50% at 22C
-TargetAHNormal=9.7
-# Target Absolute Humidity (AH) of 7.76 g/m3 equals Relative Humidity (RH) of 40% at 22C
-TargetAHFrost=7.76
-# Ventilator (HRV or ERV) and furnace fan control parameters
-VentLow=5
-VentMed=15
-VentMax=30
-FanLow=0
-FanMax=60
-# Temperature difference between any sensors to trigger recirculation mode, i.e. 3.5C = 6.3F, 4C = 7.2F, 4.5C = 8.1F, 5C = 9.0F
-RecircTDelta=81
-# Links; replace the PowerOffSite with the local electricity provider's Website outages link
-EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
-EcoBSite="http://ecobee.com"
-EcoBDevSite="https://www.ecobee.com/developers/"
-EcoBStatusSite="https://status.ecobee.com/"
-PowerOffSite="https://www.powerstream.ca/power-outages.html"
-EmergencyPhone="911"
+. /opt/scripts/happyb_config.sh
 
 # Only AccessToken is needed by the pollinator.sh. Both Access and Refresh tokens are retrieved by waggler.sh
 # Read the new access token from disk
@@ -76,7 +29,7 @@ FnGetAccessToken() {
 
 # Read the Away state from disc
 FnGetAwayState() {
-    AwayState=$(cat ${EcoDir}BAway)
+    AwayState=$(cat ${EcoDirTemp}BAway)
     if [ -n "$AwayState" ] && [ "$AwayState" -eq 1 ]; then
         AwayMode=true
     else
@@ -126,6 +79,8 @@ if [ -n "$AccessToken" ]; then
     VentilatorMinOnTimeAway=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTimeAway)
     VentilatorMinOnTime=$(FnGetValue "$RuntimeParameters" ventilatorMinOnTime)
     FanMinOnTime=$(FnGetValue "$RuntimeParameters" fanMinOnTime)
+    # IsVentilatorTimerOn=$(FnGetValue "$RuntimeParameters" isVentilatorTimerOn)
+
     # Only use main thermostat temperature for the calculation, average temperature skews absolute humidity and may cause incorrect operation in some cases
     IndoorT=$(FnGetValueAfterPattern "$RuntimeParameters" value "$BMainID")
     ## Old version that takes average temperature; may be useful as a fallback
@@ -149,7 +104,7 @@ if [ -n "$AccessToken" ]; then
     # ## Note: If paste comand is supported by the shell, the more readable code could be used
     # OccupancyTriggered=$(echo "$OccupancyState" | paste BHome - -d ' ' | awk '{if ($1+$2 >=1) o=1; if (o!=$1) {print "true";exit;}}')
     # ## Note: if paste is not supported, the same result could be achieved with native awk
-    OccupancyTriggered=$(echo "$OccupancyState" | awk 'NR==FNR{prev[FNR]=$1;next}; {if (prev[FNR]+$1 >= 1) o=1; else o=0; if (o==1 && o!=prev[FNR]) {print "true";exit}}' ${EcoDir}BHome -)
+    OccupancyTriggered=$(echo "$OccupancyState" | awk 'NR==FNR{prev[FNR]=$1;next}; {if (prev[FNR]+$1 >= 1) o=1; else o=0; if (o==1 && o!=prev[FNR]) {print "true";exit}}' ${EcoDirTemp}BHome -)
 
     # Thermostat name and all sensor names
     SensorNames=$(echo "$RuntimeParameters" | awk -F '[:,]' '/"name"/ {gsub("[[:blank:]\"]+", "", $2); print $2; next}')
@@ -163,11 +118,11 @@ if [ -n "$AccessToken" ]; then
 
     # ## Rate of Rise (RoR) fire detection
     # Humidity is a different order of magnitude and does not affect the calculation
-    FireRoRDeltas=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100 && int($1)-int(prev[FNR]) >= RORT) {print int($1)-int(prev[FNR])}}' ${EcoDir}BWarm -)
-    SensorTHistory=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100) {print prev[FNR],$1 }}' ${EcoDir}BWarm -)
+    FireRoRDeltas=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100 && int($1)-int(prev[FNR]) >= RORT) {print int($1)-int(prev[FNR])}}' ${EcoDirTemp}BWarm -)
+    SensorTHistory=$(echo "$SensorStateAll" | awk -v RORT=$RoRT 'NR==FNR{prev[FNR]=$1;next}; { if (int(prev[FNR]) > 100 && int($1) > 100) {print prev[FNR],$1 }}' ${EcoDirTemp}BWarm -)
    
     # Save the current state for the future
-    echo "$SensorStateAll" > "${EcoDir}BWarm"
+    echo "$SensorStateAll" > "${EcoDirTemp}BWarm"
     # echo "DEBUG: ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n$SensorTHistory." 2>&1 | logger -t POLLINATOR
     # $Messenger "poll0010" "DEBUG: Rate of Rise" "ecobee Mode: $EcoBMode. FireRoRDeltas: $FireRoRDeltas.\n$SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory."
 else
@@ -184,8 +139,8 @@ fi
 
 if [ -n "$OccupancyState" ]; then
     # Save the current state for the future
-    echo "$OccupancyState" > "${EcoDir}BHome"
-    SensorOccupancy=$(echo "$SensorNames" | awk 'NR==FNR{nms[FNR]=$1;next}; {print nms[FNR],$1}' ${EcoDir}BHome -)
+    echo "$OccupancyState" > "${EcoDirTemp}BHome"
+    SensorOccupancy=$(echo "$SensorNames" | awk 'NR==FNR{nms[FNR]=$1;next}; {print nms[FNR],$1}' ${EcoDirTemp}BHome -)
     # echo "DEBUG: SensorNames $SensorNames SensorOccupancy $SensorOccupancy" 2>&1 | logger -t POLLINATOR 
 fi
 
@@ -197,13 +152,15 @@ fi
 if [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     FnGetAccessToken
     # ## Note: The emergency procedure
-    # If one of the sensors temperature >= set fire temperature, switch off heat and set HRV to 0 to restrict oxygen flow
+    # If one of the sensors temperature >= set fire temperature, switch off HVAC and set HRV to 0 to restrict oxygen flow
     # Email and set the HVAC system to off mode; ecobee needs manual intervention to start again
-    EcoBOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
- 
+
+    # Try to turn all of the equipment including the vent and fan off settings
+    EcoBOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%2C%22vent%22%3A%22off%22%2C%22smartCirculation%22%3A%22false%22%2C%22ventilatorFreeCooling%22%3A%22false%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+
     # Check if operation was successful
     EcoBOffStatus=$(FnGetValue "$EcoBOff" message)
-    $Messenger "poll0040" "CRITICAL: Possible fire!" "[$FireCnt] fixed point heat sensor(s) report temperature over the treshold. Rate-of-rise heat sensors temperature difference in F*10: $FireRoRDeltas. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn them on. Here's all sensors state $SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
+    $Messenger "poll0040" "CRITICAL: Possible fire!" "[$FireCnt] fixed point heat sensor(s) report temperature over the treshold. Rate-of-rise heat sensors temperature difference in F*10: $FireRoRDeltas. Check cameras and call $EmergencyPhone if confirmed. Switching off HVAC system; someone needs to check the location and manually turn heat/cool on and remove hold. Here's all sensors state $SensorNames\n[Previous] [New] temperature in F*10\n$SensorTHistory. False alarm? When there's no fire and the actual temperature is over treshold we need to cool the house down. Switch off HappyBee hosting device and turn on the Air Conditioner until the temperature is under 30C, then switch the device back on. More info: $RuntimeParameters"
 fi
 if [ -n "$EcoBOffStatus" ]; then
     $Messenger "poll0045" "ERROR: Failed to turn HVAC off during a possible fire!" "$EcoBOff"
@@ -214,7 +171,7 @@ FnGetAwayState
 
 # Check if the cam is on
 # It's possible to either ping the cam as in the example below, or use curl to receive specific information
-if ! ping -c 1 -w 30 "$CamIP" > /dev/null; then 
+if ! ping -c 1 -w 10 "$CamIP" > /dev/null; then 
     CamOn=false
     # echo "DEBUG: CamOn $CamOn" 2>&1 | logger -t POLLINATOR
 else
@@ -230,7 +187,7 @@ if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     AwayOffStatus=$(FnGetValue "$AwayOff" message)
     AwayMode=false
     # Persist the Away state to disc
-    echo "0" > "${EcoDir}BAway"
+    echo "0" > "${EcoDirTemp}BAway"
     # echo "DEBUG: OffStatus $AwayOffStatus" 2>&1 | logger -t POLLINATOR
 fi
 if [ -n "$AwayOffStatus" ]; then
@@ -239,18 +196,13 @@ fi
 
 # Check if the security was off and only then switch on and send the alert about security being switched on
 if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
-    FnGetAccessToken
-    AwayOn=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A608%2C%22coolHoldTemp%22%3A860%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
     $Messenger "poll0060" "DEBUG: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
-    # Check if operation successful
-    AwayOnStatus=$(FnGetValue "$AwayOn" message)
+
     AwayMode=true
+    AwayModeNew=true
     # Persist the Away state to disc
-    echo "1" > "${EcoDir}BAway"
+    echo "1" > "${EcoDirTemp}BAway"
     # echo "DEBUG: OnStatus $AwayOnStatus" 2>&1 | logger -t POLLINATOR
-fi
-if [ -n "$AwayOnStatus" ]; then
-    $Messenger "poll0065" "ERROR: Failed to switch security on." "$AwayOn. Occupancy: $SensorOccupancy"
 fi
 
 # Check if occupancy is triggered during Away
@@ -296,6 +248,7 @@ if [ "$AwayMode" = true ]; then
     HRVMin="$HRVAway"
     HRVHome="$HRVAway"
     FanInAuto="$FanLow"
+    # IsVentilatorTimerOn="false"
 else
     HRVMin="$HRVHome"
 fi
@@ -312,6 +265,7 @@ if [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     HRVMin="$VentLow"
     FanInAuto="$FanLow"
     MaxVentilate=false
+    # IsVentilatorTimerOn="false"
 fi
 
 # Only set HRV parameters if they need to be different
@@ -320,7 +274,9 @@ if [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$Ventila
     HRVAlreadySet=true
 elif [ -n "$IndoorRH" ]; then
     FnGetAccessToken
+    # %2C%22isVentilatorTimerOn%22%3A$IsVentilatorTimerOn
     HRVSet=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22ventilatorMinOnTimeHome%22%3A$HRVHome%2C%22ventilatorMinOnTimeAway%22%3A$HRVAway%2C%22ventilatorMinOnTime%22%3A$HRVMin%2C%22fanMinOnTime%22%3A$FanInAuto%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+
     # Check if operation was successful
     HRVSetStatus=$(FnGetValue "$HRVSet" message)
 fi
@@ -335,6 +291,21 @@ if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC." 2>&1 | logger -t POLLINATOR
 fi
 
+# ## Set temperature hold and fan mode when Away just switched on or in emergency
+# ## Note: the hold has to be set after HRV call to avoid fan always on bug
+if [ "$AwayModeNew" = true ] || [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
+    FnGetAccessToken
+    # Hold with fan=auto is the only way to reliably set fan to off after setting HRV - this is a workaround for ecobee quirk when fan always runs
+    AwayOn=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A$AwayHeatT%2C%22coolHoldTemp%22%3A$AwayCoolT%2C%22fan%22%3A%22auto%22%7D%7D%5D%7D%20" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+
+    # Check if operation successful
+    AwayOnStatus=$(FnGetValue "$AwayOn" message)
+fi
+
+if [ -n "$AwayOnStatus" ]; then
+    $Messenger "poll0085" "ERROR: Failed to set temperature hold." "$AwayOn. Occupancy: $SensorOccupancy"
+fi
+
 # ## Perform additional ecobee diagnostics
 # Check that "hvacMode" is not off|cool) in winter months or when temperature is under a treshold inside or outside. Possible hvacMode values: auto auxHeatOnly cool heat off
 # It's possible to switch ecobee on automatically if no fire was detected, but this could prevent maintenance tasks in Winter.
@@ -343,13 +314,13 @@ if [ "$FreezingRisk" = true ]; then
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
 fi
 
-if ! ping -c 1 -w 30 "$EcoBIP" > /dev/null; then
+if ! ping -c 1 -w 10 "$EcoBIP" > /dev/null; then
     EcoBPing=false
-    $Messenger "poll0101" "WARNING: ecobee thermostat disconnected locally." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+    $Messenger "poll0101" "ERROR: ecobee thermostat disconnected locally." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
 
 if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then
-    $Messenger "poll0100" "WARNING: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+    $Messenger "poll0100" "ERROR: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
     # Decide to turn on the furnace if ecobee is hanging after a power surge or short-term outage
     FurnaceState=$(echo $($FurnaceControl getstate))
@@ -360,5 +331,7 @@ fi
 # Attempt to turn on the furnace if it's not already "ON"
 if [ ! "$FurnaceState" = "ON" ]; then
     FurnaceOn=$(echo $($FurnaceControl on))
-    $Messenger "poll0110" "WARNING: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
+    $Messenger "poll0110" "ERROR: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
 fi
+
+#$Messenger "poll0200" "DEBUG: runtime parameters" "$RuntimeParameters"
