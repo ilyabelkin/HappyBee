@@ -171,7 +171,7 @@ FnGetAwayState
 
 # Check if the cam is on
 # It's possible to either ping the cam as in the example below, or use curl to receive specific information
-if ! ping -c 1 -w 10 "$CamIP" > /dev/null; then 
+if ! ping -c 1 -w 20 "$CamIP" > /dev/null; then 
     CamOn=false
     # echo "DEBUG: CamOn $CamOn" 2>&1 | logger -t POLLINATOR
 else
@@ -314,13 +314,13 @@ if [ "$FreezingRisk" = true ]; then
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
 fi
 
-if ! ping -c 1 -w 10 "$EcoBIP" > /dev/null; then
+if ! ping -c 1 -w 20 "$EcoBIP" > /dev/null; then
     EcoBPing=false
-    $Messenger "poll0101" "ERROR: ecobee thermostat disconnected locally." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+    # $Messenger "poll0101" "INFO: ecobee thermostat disconnected locally." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
 fi
 
 if [ "$EcoBPing" = false ] && [ ! "$EcoBConnected" = true ]; then
-    $Messenger "poll0100" "ERROR: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
+    $Messenger "poll0100" "WARNING: ecobee thermostat disconnected." "ecobee local network connected status: $EcoBPing. ecobee online connected status: $EcoBConnected. The HVAC could be completely out of power, or ecobee thermostat hangs and the HVAC system needs to be switched off and on again. In Winter pipes could freeze, please fix on site. See $PowerOffSite. Login here to see if functionality was restored $EcoBSite. See status and docs at: $EcoBStatusSite and $EcoBDevSite. More info: $RuntimeParameters"
     # echo "DEBUG: RealEmergency $RuntimeParameters" 2>&1 | logger -t POLLINATOR
     # Decide to turn on the furnace if ecobee is hanging after a power surge or short-term outage
     FurnaceState=$(echo $($FurnaceControl getstate))
@@ -331,7 +331,7 @@ fi
 # Attempt to turn on the furnace if it's not already "ON"
 if [ ! "$FurnaceState" = "ON" ]; then
     FurnaceOn=$(echo $($FurnaceControl on))
-    $Messenger "poll0110" "ERROR: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
+    $Messenger "poll0110" "WARNING: attempting to turn the furnace back on." "Original furnace state: $FurnaceState. New furnace state: $FurnaceOn"
 fi
 
 #$Messenger "poll0200" "DEBUG: runtime parameters" "$RuntimeParameters"

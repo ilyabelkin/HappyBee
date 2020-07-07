@@ -14,8 +14,8 @@ WEBHOOK_KEY="******"
 
 # Minimum interval before the next delivery, minutes
 CRITICAL=10
-ERROR=30
-WARNING=60
+ERROR=60
+WARNING=360
 INFO=1440
 DEBUG=0
 
