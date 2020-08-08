@@ -182,7 +182,7 @@ fi
 if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     FnGetAccessToken
     AwayOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22resumeProgram%22%2C%22params%22%3A%7B%22resumeAll%22%3Afalse%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
-    $Messenger "poll0050" "DEBUG: Security switched off." "Someone switched off security. Setting thermostat to Home mode. Occupancy: $SensorOccupancy"
+    $Messenger "poll0050" "ALERT: Security switched off." "Someone switched off security. Setting thermostat to Home mode. Occupancy: $SensorOccupancy"
     # Check if operation successful
     AwayOffStatus=$(FnGetValue "$AwayOff" message)
     AwayMode=false
@@ -196,7 +196,7 @@ fi
 
 # Check if the security was off and only then switch on and send the alert about security being switched on
 if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
-    $Messenger "poll0060" "DEBUG: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
+    $Messenger "poll0060" "ALERT: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
 
     AwayMode=true
     AwayModeNew=true

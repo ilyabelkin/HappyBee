@@ -18,6 +18,7 @@ ERROR=60
 WARNING=360
 INFO=1440
 DEBUG=0
+ALERT=0
 
 # ### waggler.sh configuration
 # Get the directory name to be able to store/read persistent info like tokens (BDance files)
@@ -38,7 +39,7 @@ FurnaceControl="sh /opt/scripts/wemo_control_busyb.sh $FurnaceSwitchIP"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="4.6.3.60"
+BFirmwareVersion="4.6.3.82"
 # Main censor ID
 BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
