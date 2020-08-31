@@ -241,7 +241,7 @@ if [ "$MaxVentilate" = true ]; then
     HRVHome="$VentMax"
 else
     HRVAway="$VentLow"
-    HRVHome="$VentLow"
+    HRVHome="$VentMed"
 fi
 
 if [ "$AwayMode" = true ]; then

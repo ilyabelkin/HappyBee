@@ -64,7 +64,7 @@ TargetAHNormal=9.7
 TargetAHFrost=7.76
 # Ventilator (HRV or ERV) and furnace fan control parameters
 VentLow=5
-VentMed=15
+VentMed=10
 VentMax=30
 FanLow=0
 FanMax=60
