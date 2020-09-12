@@ -39,7 +39,7 @@ FurnaceControl="sh /opt/scripts/wemo_control_busyb.sh $FurnaceSwitchIP"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="4.6.3.82"
+BFirmwareVersion="4.6.15.132"
 # Main censor ID
 BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
