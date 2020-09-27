@@ -34,8 +34,12 @@ EcoDirTemp="/var/log/"
 EcoBIP="*.*.*.*"
 CamIP="*.*.*.*"
 FurnaceSwitchIP="*.*.*.*"
+SecSwIP1="*.*.*.*"
+SecSwIP2="*.*.*.*"
+SecSwIP3="*.*.*.*"
+SecCtrl="sh /opt/scripts/wemo_control_busyb.sh"
+FurnaceControl="$SecCtrl $FurnaceSwitchIP"
 Messenger="sh /opt/scripts/messenger.sh"
-FurnaceControl="sh /opt/scripts/wemo_control_busyb.sh $FurnaceSwitchIP"
 
 # ## Constants
 # Current firmware version

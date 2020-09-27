@@ -12,6 +12,7 @@
 * **Fire detection** when one or more remote sensors or the thermostat itself (used as heat detectors) report temperature over a fixed threshold or if there's a rapid rate of temperature rise: [About Heat detectors](https://en.wikipedia.org/wiki/Heat_detector). This feature could be used in conjunction with smoke/carbon monoxide detection by additional equipment
 * **Trigger IFTTT Webhooks** when a critical event occurs
 * **Rate-limit** non-critical messages
+* **Turn on and off additional smart switches** to work around Wemo and IFTTT limitations
 
 ## Warnings, notes and known issues
 
@@ -46,7 +47,7 @@
 
 ### The exact procedure will depend on your server; open an issue or PR if a specific device support is needed
 
-* Register as an ecobee developer and enroll your thermostat: [ecoobee Developers Website](https://www.ecobee.com/developers/)
+* Register as an ecobee developer and enroll your thermostat: [ecobee Developers Website](https://www.ecobee.com/developers/)
 * Copy scripts to the server (i.e. single-board computer like Raspberry Pi or a DD-WRT router)
 * Configure persistent storage and create a directory for tokens / occupancy state files
 * Configure email parameters in the happyb_config.sh
