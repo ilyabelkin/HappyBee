@@ -43,7 +43,7 @@ Messenger="sh /opt/scripts/messenger.sh"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="4.6.15.132"
+BFirmwareVersion="4.6.25.50"
 # Main censor ID
 BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
