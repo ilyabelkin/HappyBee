@@ -37,7 +37,8 @@ FurnaceSwitchIP="*.*.*.*"
 SecSwIP1="*.*.*.*"
 SecSwIP2="*.*.*.*"
 SecSwIP3="*.*.*.*"
-SecCtrl="sh /opt/scripts/wemo_control_busyb.sh"
+# ## The command will timeout in 10 seconds if a switch is unresponsive
+SecCtrl="timeout 10 sh /opt/scripts/wemo_control_busyb.sh"
 FurnaceControl="$SecCtrl $FurnaceSwitchIP"
 Messenger="sh /opt/scripts/messenger.sh"
 
