@@ -44,7 +44,7 @@ Messenger="sh /opt/scripts/messenger.sh"
 
 # ## Constants
 # Current firmware version
-BFirmwareVersion="4.6.25.50"
+BFirmwareVersion="*.*.*.*"
 # Main censor ID
 BMainID=ei:0
 # Temperature (T) of 41 Fahrenheit(F) or 5 Celsius(C)
@@ -80,5 +80,5 @@ EcoBAPI="https://api.ecobee.com/1/thermostat?format=json"
 EcoBSite="http://ecobee.com"
 EcoBDevSite="https://www.ecobee.com/developers/"
 EcoBStatusSite="https://status.ecobee.com/"
-PowerOffSite="https://www.powerstream.ca/power-outages.html"
+PowerOffSite="https://[your utility power outage page]"
 EmergencyPhone="911"
