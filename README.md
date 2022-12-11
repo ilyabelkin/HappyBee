@@ -67,3 +67,4 @@ Any feedback is welcome. Please open an issue or submit a PR
 * [DD-WRT community](https://www.dd-wrt.com/phpBB2/) for the messenger.sh
 * Peter Mander for his amazing [Relative to Absolute Humidity conversion formula](https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/)
 * [Victor Mendonca](https://github.com/victorbrca) for the original Wemo Control Bash script that I adapted to BusyBox/Ash
+
