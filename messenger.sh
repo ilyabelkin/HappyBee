@@ -62,34 +62,10 @@ fi
 
 # Show that something is happening (-n doesn't send a line feed)
 echo -n 'Emailing to ' $RECIPIENT $RECIPIENT2 ' about ' $ID $SUBJECT 2>&1 | logger -t MESSENGER
-# Parenthesis to start a "subshell" that will pass commands to openssl through a pipe
-(
-# This is the Gmail login for your router's special Gmail address
-AUTH=$USER
-# The FROM line is only "for show" in the email header (the email will come from the Gmail account
-# regardless of what you put for the FROM line)
-FROM=$AUTH
-# We need to generate base64 login and password for openssl session
-AUTH64="$(echo -n $AUTH | openssl enc -base64)"
-PASS64="$(echo -n $PASS | openssl enc -base64)"
-# Time to start talking to Gmail smtp server
-echo 'auth login' ; sleep 1 ; \
-echo $AUTH64 ; sleep 1 ; \
-echo $PASS64 ; sleep 1 ; \
-echo 'mail from: <'$FROM'>' ; sleep 1 ; \
-echo 'rcpt to: <'$RECIPIENT'>' ; sleep 1 ; \
-# add a second recipient if configured
-if [ -n "$RECIPIENT2" ]; then
-echo 'rcpt to: <'$RECIPIENT2'>' ; sleep 1 ; \
-fi
-echo 'data' ; sleep 1 ; \
-echo 'Subject: '$SUBJECT ; sleep 1 ; \
-echo ''; sleep 1; \
-echo "$BODY"; \
-echo '.' ; sleep 1 ; \
-echo 'QUIT') 2>&1 | \
-openssl s_client -connect smtp.gmail.com:587 -starttls smtp -crlf -ign_eof -quiet > /dev/null 2>&1
-echo ' Email sent!' 2>&1 | logger -t MESSENGER
+
+# Use Postfix email instead of openssl
+echo "$BODY" | mail -s $SUBJECT $RECIPIENT1,$RECIPIENT2
+echo ' Postfix email sent!' 2>&1 | logger -t MESSENGER
 
 # save the rate-limit marker
 if [ ! -n "$RL_ON" ] && [ -n "$RL_LEVEL" ]; then
