@@ -4,7 +4,7 @@
 # Run every 2 minutes: put the settings below in crontab and remember to update parameters in the configuration file
 # */2 * * * * root sh /opt/scripts/pollinator.sh
 # ## Initial setup notes
-# ## Register as an ecobee developer, create an application and get the Client ID: https://www.ecobee.com/developers/
+# ## Register as an ecobee developer (Update: Ecobee stopped accepting new developers and doesn't allow creating new apps - do not remove your old applications), create an application and get the Client ID: https://www.ecobee.com/developers/
 # ## Note: a race condition exists when an access token expires when waggler.sh just refreshed it. Some operations would initially fail, but succeed on the next cycle
 # ## Note: to debug if something doesn't work in the script, redirect error output to a file: 2>/tmp/stderr.txt, and delete the file after reviewing the problem
 # ## A great book on Bourne Shell Scripting: https://en.wikibooks.org/wiki/Bourne_Shell_Scripting
@@ -70,8 +70,8 @@ FnGetAccessToken
 
 if [ -n "$AccessToken" ]; then
     # Get runtime parameters
-    ## Note -k option is insecure, but necessary on some systems
-    RuntimeParameters=$(curl -s -k -H "Content-Type: text/json" -H "Authorization: Bearer $AccessToken" "$EcoBAPI"'&body=\{"selection":\{"selectionType":"registered","selectionMatch":"","includeSensors":"true","includeVersion":"true","includeRuntime":"true","includeSettings":"true","includeWeather":"true"\}\}')
+    RuntimeParameters=$(curl --globoff -s -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI"'&body=%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%2C%22includeSensors%22%3A%22true%22%2C%22includeVersion%22%3A%22true%22%2C%22includeRuntime%22%3A%22true%22%2C%22includeSettings%22%3A%22true%22%2C%22includeWeather%22%3A%22true%22%7D%7D')
+
 
     DesiredHeat=$(FnGetValue "$RuntimeParameters" desiredHeat)
     DesiredCool=$(FnGetValue "$RuntimeParameters" desiredCool)
@@ -156,7 +156,7 @@ if [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
     # Email and set the HVAC system to off mode; ecobee needs manual intervention to start again
 
     # Try to turn all of the equipment including the vent and fan off settings
-    EcoBOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%2C%22vent%22%3A%22off%22%2C%22smartCirculation%22%3A%22false%22%2C%22ventilatorFreeCooling%22%3A%22false%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+    EcoBOff=$(curl -s --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22hvacMode%22%3A%22off%22%2C%22vent%22%3A%22off%22%2C%22smartCirculation%22%3A%22false%22%2C%22ventilatorFreeCooling%22%3A%22false%22%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
 
     # Check if operation was successful
     EcoBOffStatus=$(FnGetValue "$EcoBOff" message)
@@ -181,13 +181,13 @@ fi
 # Check if the security was on and only then switch off and send the alert about security being switched off
 if [ "$CamOn" = false ] && [ "$AwayMode" = true ]; then
     FnGetAccessToken
-    AwayOff=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22resumeProgram%22%2C%22params%22%3A%7B%22resumeAll%22%3Afalse%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+    AwayOff=$(curl -s --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22resumeProgram%22%2C%22params%22%3A%7B%22resumeAll%22%3Afalse%7D%7D%5D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
     $Messenger "poll0050" "ALERT: Security switched off." "Someone switched off security. Setting thermostat to Home mode. Occupancy: $SensorOccupancy"
 
     ## Optionally turn off additional equipment
-    # $SecCtrl $SecSwIP1 off
-    # $SecCtrl $SecSwIP2 off
-    # $SecCtrl $SecSwIP3 off
+    #$SecCtrl $SecSwIP1 off
+    #$SecCtrl $SecSwIP2 off
+    #$SecCtrl $SecSwIP3 off
 
     # Check if operation successful
     AwayOffStatus=$(FnGetValue "$AwayOff" message)
@@ -205,9 +205,9 @@ if [ "$CamOn" = true ] && [ "$AwayMode" = false ]; then
     $Messenger "poll0060" "ALERT: Security switched on." "Someone switched on security. Setting thermostat to Away mode. Occupancy: $SensorOccupancy" 
 
     ## Optionally turn on additional equipment
-    # $SecCtrl $SecSwIP1 on
-    # $SecCtrl $SecSwIP2 on
-    # $SecCtrl $SecSwIP3 on
+    #$SecCtrl $SecSwIP1 on
+    #$SecCtrl $SecSwIP2 on
+    #$SecCtrl $SecSwIP3 on
 
     AwayMode=true
     AwayModeNew=true
@@ -286,7 +286,7 @@ if [ -n "$IndoorRH" ] && [ "$VentilatorMinOnTime" -eq "$HRVMin" ] && [ "$Ventila
 elif [ -n "$IndoorRH" ]; then
     FnGetAccessToken
     # %2C%22isVentilatorTimerOn%22%3A$IsVentilatorTimerOn
-    HRVSet=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22ventilatorMinOnTimeHome%22%3A$HRVHome%2C%22ventilatorMinOnTimeAway%22%3A$HRVAway%2C%22ventilatorMinOnTime%22%3A$HRVMin%2C%22fanMinOnTime%22%3A$FanInAuto%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+    HRVSet=$(curl -s --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22thermostat%22%3A%7B%22settings%22%3A%7B%22ventilatorMinOnTimeHome%22%3A$HRVHome%2C%22ventilatorMinOnTimeAway%22%3A$HRVAway%2C%22ventilatorMinOnTime%22%3A$HRVMin%2C%22fanMinOnTime%22%3A$FanInAuto%7D%7D%7D" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
 
     # Check if operation was successful
     HRVSetStatus=$(FnGetValue "$HRVSet" message)
@@ -302,19 +302,19 @@ if [ -n "$HRVSet" ] && [ "$MaxVentilate" = true ]; then
     echo "DEBUG: Maximum Ventilation mode cycle started: The Absolute Humidity outdoors is $OutAH, the target AH is $TargetAH, so the house will be ventilated more to normalize indoor AH ($IndoorAH). Using main thermostat temperature, $IndoorTC, for the calculation. Outdoor temperature is $OutTC." 2>&1 | logger -t POLLINATOR
 fi
 
-# ## Set temperature hold and fan mode when Away just switched on or in emergency
-# ## Note: the hold has to be set after HRV call to avoid fan always on bug
+## Set temperature hold and fan mode when Away just switched on or in emergency
+## Note: the hold has to be set after HRV call to avoid fan always on bug
 if [ "$AwayModeNew" = true ] || [ "$EcoBMode" = off ] || [ -n "$FireCnt" ] || [ -n "$FireRoRDeltas" ]; then
-    FnGetAccessToken
-    # Hold with fan=auto is the only way to reliably set fan to off after setting HRV - this is a workaround for ecobee quirk when fan always runs
-    AwayOn=$(curl -s -k --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A$AwayHeatT%2C%22coolHoldTemp%22%3A$AwayCoolT%2C%22fan%22%3A%22auto%22%7D%7D%5D%7D%20" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
+   FnGetAccessToken
+   # Hold with fan=auto is the only way to reliably set fan to off after setting HRV - this is a workaround for ecobee quirk when fan always runs
+    AwayOn=$(curl -s --request POST --data "%7B%22selection%22%3A%7B%22selectionType%22%3A%22registered%22%2C%22selectionMatch%22%3A%22%22%7D%2C%22functions%22%3A%5B%7B%22type%22%3A%22setHold%22%2C%22params%22%3A%7B%22holdType%22%3A%22indefinite%22%2C%22heatHoldTemp%22%3A$AwayHeatT%2C%22coolHoldTemp%22%3A$AwayCoolT%2C%22fan%22%3A%22auto%22%7D%7D%5D%7D%20" -H "Content-Type: application/json;charset=UTF-8" -H "Authorization: Bearer $AccessToken" "$EcoBAPI")
 
-    # Check if operation successful
-    AwayOnStatus=$(FnGetValue "$AwayOn" message)
+   # Check if operation successful
+   AwayOnStatus=$(FnGetValue "$AwayOn" message)
 fi
 
 if [ -n "$AwayOnStatus" ]; then
-    $Messenger "poll0085" "ERROR: Failed to set temperature hold." "$AwayOn. Occupancy: $SensorOccupancy"
+   $Messenger "poll0085" "ERROR: Failed to set temperature hold." "$AwayOn. Occupancy: $SensorOccupancy"
 fi
 
 # ## Perform additional ecobee diagnostics

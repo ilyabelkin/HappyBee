@@ -47,7 +47,7 @@
 
 ### The exact procedure will depend on your server; open an issue or PR if a specific device support is needed
 
-* Register as an ecobee developer and enroll your thermostat: [ecobee Developers Website](https://www.ecobee.com/developers/)
+* *Update: this is no longer possible; Ecobee doesn't allow new developers to register or new apps to be created.* Register as an ecobee developer and enroll your thermostat: [ecobee Developers Website](https://www.ecobee.com/developers/)
 * Copy scripts to the server (i.e. single-board computer like Raspberry Pi or a DD-WRT router)
 * Configure persistent storage and create a directory for tokens / occupancy state files
 * Configure email parameters in the happyb_config.sh
@@ -67,4 +67,3 @@ Any feedback is welcome. Please open an issue or submit a PR
 * [DD-WRT community](https://www.dd-wrt.com/phpBB2/) for the messenger.sh
 * Peter Mander for his amazing [Relative to Absolute Humidity conversion formula](https://carnotcycle.wordpress.com/2012/08/04/how-to-convert-relative-humidity-to-absolute-humidity/)
 * [Victor Mendonca](https://github.com/victorbrca) for the original Wemo Control Bash script that I adapted to BusyBox/Ash
-

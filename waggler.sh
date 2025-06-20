@@ -17,8 +17,7 @@ FnGetValue() {
 
 if [ -n "$RefreshToken" ]; then
     # If refresh token is present, get a new access/refresh token pair
-    # ## Note -k option is insecure, but necessary on some systems
-    TokenPair=$(curl -k -X POST "$EcoBAuth""?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
+    TokenPair=$(curl -X POST "$EcoBAuth""?grant_type=refresh_token&refresh_token=$RefreshToken&client_id=$ClientID")
 else
     $Messenger "wagg0010" "ERROR: Refresh token is missing." "Add the app by PIN, then authorize it, and save the token to the persistent storage $EcoDir. See $EcoBDevSite. See status at: $EcoBStatusSite."
 fi
