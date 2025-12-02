@@ -6,11 +6,13 @@ PASS="******"
 RECIPIENT="*@*.*"
 #RECIPIENT2="*@*.*"
 
-# IFTTT Webhook for CRITICAL events. The key is found on Documentation page in IFTTT
+# Pushover Webhooks for CRITICAL events. WEBHOOK_KEY is the App Api key
 WEBHOOK_EVENT="Alarm"
 WEBHOOK_KEY="******"
+USER_KEY="******"
 #WEBHOOK2_EVENT="Alarm"
 #WEBHOOK2_KEY="******"
+#USER2_KEY="******"
 
 # Minimum interval before the next delivery, minutes
 CRITICAL=10

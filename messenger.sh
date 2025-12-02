@@ -2,20 +2,13 @@
 # ### messenger.sh: a special bee that knows how to talk to humans, e.g. through email ###
 # Adapted from: http://www.dd-wrt.com/phpBB2/viewtopic.php?t=288339&postdays=0&postorder=asc&start=15
 # Save as /opt/scripts/messenger.sh
-# This script sends an email through gmail
+# This script sends an email through postfix and triggers a critical alarm through a webhook, i.e. using Pushover
 #
-# Note: you must turn ON "Access for less secure apps" in the Gmail settings: or use App Passwords
-# https://www.google.com/settings/security/lesssecureapps
-# It's recommended you create a separate Gmail account just for your linux device.
-#####################################################################################
-# ## Note: specify the Google login information in the variables USER and PASS,
-# ## as well as the default email address you wish to use in DEFAULT (usually yourself!)
-#####################################################################################
 # Usage : sh /opt/scripts/messenger.sh  subject body
 # subject : Subject of email
 # body : Body of email.  Use line feeds \n in body of message to force a carriage return.
 #
-# The recipient emails, login and password, as well as Webhooks are stored in a configuration file:
+# The recipient emails, login and password, as well as Webhook configuration are stored in a configuration file:
 . /opt/scripts/happyb_config.sh
 
 # Pick out id, subject and body from arguments
@@ -46,12 +39,12 @@ fi
 # Trigger Webhook(s) if the event is critical and not rate-limited
 if [ ! -n "$RL_ON" ] && [ -n "$WEBHOOK_EVENT" ] && [ "$RL_LEVEL" = "CRITICAL" ]; then
     echo -n 'Triggering Webhook Event' $WEBHOOK_EVENT 2>&1 | logger -t MESSENGER
-    curl -X POST -H "Content-Type: application/json" -d '{"value1":"'"$SUBJECT"'","value2":"Check email for more information.","value3":"'"$ID"'"}' https://maker.ifttt.com/trigger/$WEBHOOK_EVENT/with/key/$WEBHOOK_KEY
+    curl -s --form-string 'token='"$WEBHOOK_KEY" --form-string 'user='"$USER_KEY" --form-string 'message='"$SUBJECT"' Check email for more information. '"$ID"  https://api.pushover.net/1/messages.json
 fi
 
 if [ ! -n "$RL_ON" ] && [ -n "$WEBHOOK2_EVENT" ] && [ "$RL_LEVEL" = "CRITICAL" ]; then
     echo -n 'Triggering Webhook Event' $WEBHOOK2_EVENT 2>&1 | logger -t MESSENGER
-    curl -X POST -H "Content-Type: application/json" -d '{"value1":"'"$SUBJECT"'","value2":"Check email for more information.","value3":"'"$ID"'"}' https://maker.ifttt.com/trigger/$WEBHOOK2_EVENT/with/key/$WEBHOOK2_KEY
+    curl -s --form-string 'token='"$WEBHOOK2_KEY" --form-string 'user='"$USER2_KEY" --form-string 'message='"$SUBJECT"' Check email for more information. '"$ID"  https://api.pushover.net/1/messages.json
 fi
 
 # only rate-limit non-critical email
