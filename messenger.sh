@@ -39,12 +39,12 @@ fi
 # Trigger Webhook(s) if the event is critical and not rate-limited
 if [ ! -n "$RL_ON" ] && [ -n "$WEBHOOK_EVENT" ] && [ "$RL_LEVEL" = "CRITICAL" ]; then
     echo -n 'Triggering Webhook Event' $WEBHOOK_EVENT 2>&1 | logger -t MESSENGER
-    curl -s --form-string 'token='"$WEBHOOK_KEY" --form-string 'user='"$USER_KEY" --form-string 'message='"$SUBJECT"' Check email for more information. '"$ID"  https://api.pushover.net/1/messages.json
+    curl -s --form-string 'token='"$WEBHOOK_KEY" --form-string 'user='"$USER_KEY" --form-string 'message='"$SUBJECT"' Check email for more information. '"$ID" --form-string "priority=2" --form-string "retry=30" --form-string "expire=180" https://api.pushover.net/1/messages.json
 fi
 
 if [ ! -n "$RL_ON" ] && [ -n "$WEBHOOK2_EVENT" ] && [ "$RL_LEVEL" = "CRITICAL" ]; then
     echo -n 'Triggering Webhook Event' $WEBHOOK2_EVENT 2>&1 | logger -t MESSENGER
-    curl -s --form-string 'token='"$WEBHOOK2_KEY" --form-string 'user='"$USER2_KEY" --form-string 'message='"$SUBJECT"' Check email for more information. '"$ID"  https://api.pushover.net/1/messages.json
+    curl -s --form-string 'token='"$WEBHOOK2_KEY" --form-string 'user='"$USER2_KEY" --form-string 'message='"$SUBJECT"' Check email for more information. '"$ID" --form-string "priority=2" --form-string "retry=30" --form-string "expire=180" https://api.pushover.net/1/messages.json
 fi
 
 # only rate-limit non-critical email
